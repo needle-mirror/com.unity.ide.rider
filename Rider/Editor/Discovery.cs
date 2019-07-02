@@ -24,6 +24,7 @@ namespace Packages.Rider.Editor
           Path = riderInfo.Path,
           Name = riderInfo.Presentation
         })
+        .OrderBy(a=>a.Name)
         .ToArray();
     }
   }
@@ -107,12 +108,12 @@ namespace Packages.Rider.Editor
       var home = Environment.GetEnvironmentVariable("HOME");
       if (string.IsNullOrEmpty(home))
         return new RiderInfo[0];
-      var pathToBuildTxt = "../../build.txt";
+
       //$Home/.local/share/JetBrains/Toolbox/apps/Rider/ch-0/173.3994.1125/bin/rider.sh
       //$Home/.local/share/JetBrains/Toolbox/apps/Rider/ch-0/.channel.settings.json
       var toolboxRiderRootPath = Path.Combine(home, @".local/share/JetBrains/Toolbox/apps/Rider");
       var paths = CollectPathsFromToolbox(toolboxRiderRootPath, "bin", "rider.sh", false)
-        .Select(a => new RiderInfo(GetBuildNumber(Path.Combine(a, pathToBuildTxt)), a, true)).ToList();
+        .Select(a => new RiderInfo(a, true)).ToList();
 
       //$Home/.local/share/applications/jetbrains-rider.desktop
       var shortcut = new FileInfo(Path.Combine(home, @".local/share/applications/jetbrains-rider.desktop"));
@@ -127,28 +128,30 @@ namespace Packages.Rider.Editor
           var path = line.Split('"').Where((item, index) => index == 1).SingleOrDefault();
           if (string.IsNullOrEmpty(path))
             continue;
-          var buildTxtPath = Path.Combine(path, pathToBuildTxt);
-          var buildNumber = GetBuildNumber(buildTxtPath);
+
           if (paths.Any(a => a.Path == path)) // avoid adding similar build as from toolbox
             continue;
-          paths.Add(new RiderInfo(buildNumber, path, false));
+          paths.Add(new RiderInfo(path, false));
         }
       }
 
+      // snap install
+      var snapInstallPath = "/snap/rider/current/bin/rider.sh";
+      if (new FileInfo(snapInstallPath).Exists)
+        paths.Add(new RiderInfo(snapInstallPath, false));
+      
       return paths.ToArray();
     }
 
     private static RiderInfo[] CollectRiderInfosMac()
     {
-      var pathToBuildTxt = "Contents/Resources/build.txt";
-
       // "/Applications/*Rider*.app"
       var folder = new DirectoryInfo("/Applications");
       if (!folder.Exists)
         return new RiderInfo[0];
 
       var results = folder.GetDirectories("*Rider*.app")
-        .Select(a => new RiderInfo(GetBuildNumber(Path.Combine(a.FullName, pathToBuildTxt)), a.FullName, false))
+        .Select(a => new RiderInfo(a.FullName, false))
         .ToList();
 
       // /Users/user/Library/Application Support/JetBrains/Toolbox/apps/Rider/ch-1/181.3870.267/Rider EAP.app
@@ -157,30 +160,31 @@ namespace Packages.Rider.Editor
       {
         var toolboxRiderRootPath = Path.Combine(home, @"Library/Application Support/JetBrains/Toolbox/apps/Rider");
         var paths = CollectPathsFromToolbox(toolboxRiderRootPath, "", "Rider*.app", true)
-          .Select(a => new RiderInfo(GetBuildNumber(Path.Combine(a, pathToBuildTxt)), a, true));
+          .Select(a => new RiderInfo(a, true));
         results.AddRange(paths);
       }
 
       return results.ToArray();
     }
 
-    private static string GetBuildNumber(string path)
+    internal static string GetBuildNumber(string path)
     {
-      var file = new FileInfo(path);
-      if (file.Exists)
-        return File.ReadAllText(file.FullName);
+      var file = new FileInfo(Path.Combine(path, GetRelativePathToBuildTxt()));
+      if (!file.Exists) 
+        return string.Empty;
+      var text = File.ReadAllText(file.FullName);
+      if (text.Length > 3)
+        return text.Substring(3);
       return string.Empty;
     }
 
     private static RiderInfo[] CollectRiderInfosWindows()
     {
-      var pathToBuildTxt = "../../build.txt";
-
       var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
       var toolboxRiderRootPath = Path.Combine(localAppData, @"JetBrains\Toolbox\apps\Rider");
       var installPathsToolbox = CollectPathsFromToolbox(toolboxRiderRootPath, "bin", "rider64.exe", false).ToList();
       var installInfosToolbox = installPathsToolbox
-        .Select(a => new RiderInfo(GetBuildNumber(Path.Combine(a, pathToBuildTxt)), a, true)).ToList();
+        .Select(a => new RiderInfo(a, true)).ToList();
 
       var installPaths = new List<string>();
       const string registryKey = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall";
@@ -189,10 +193,23 @@ namespace Packages.Rider.Editor
       CollectPathsFromRegistry(wowRegistryKey, installPaths);
 
       var installInfos = installPaths
-        .Select(a => new RiderInfo(GetBuildNumber(Path.Combine(a, pathToBuildTxt)), a, false)).ToList();
+        .Select(a => new RiderInfo(a, false)).ToList();
       installInfos.AddRange(installInfosToolbox);
 
       return installInfos.ToArray();
+    }
+
+    private static string GetRelativePathToBuildTxt()
+    {
+      switch (SystemInfo.operatingSystemFamily)
+      {
+        case OperatingSystemFamily.Windows: 
+        case OperatingSystemFamily.Linux:
+          return "../../build.txt";
+        case OperatingSystemFamily.MacOSX:
+          return "Contents/Resources/build.txt";
+      }
+      throw new Exception("Unknown OS");
     }
 
     private static void CollectPathsFromRegistry(string registryKey, List<string> installPaths)
@@ -370,16 +387,11 @@ namespace Packages.Rider.Editor
       public string BuildVersion;
       public string Path;
 
-      public RiderInfo(string buildVersion, string path, bool isToolbox)
+      public RiderInfo(string path, bool isToolbox)
       {
-        BuildVersion = buildVersion;
+        BuildVersion = GetBuildNumber(path);
         Path = new FileInfo(path).FullName; // normalize separators
-
-        var version = string.Empty;
-        if (buildVersion.Length > 3)
-          version = buildVersion.Substring(3);
-
-        var presentation = "Rider " + version;
+        var presentation = "Rider " + BuildVersion;
         if (isToolbox)
           presentation += " (JetBrains Toolbox)";
 

@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using UnityEngine;
 
-namespace Packages.Rider.Editor
+namespace Packages.Rider.Editor.Util
 {
   public static class UnityUtils
   {

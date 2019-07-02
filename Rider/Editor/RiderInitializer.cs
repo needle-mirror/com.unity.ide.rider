@@ -12,7 +12,7 @@ namespace Packages.Rider.Editor
       {
         if (EditorPluginInterop.EditorPluginIsLoadedFromAssets())
         {
-          Debug.LogError($"Please delete {EditorPluginInterop.GetEditorPluginAssembly().Location}. Unity 2019.2+ loads it directly from Rider installation.");
+          Debug.LogError($"Please delete {EditorPluginInterop.GetEditorPluginAssembly().Location}. Unity 2019.2+ loads it directly from Rider installation. To disable this, open Rider's settings, search and uncheck 'Automatically install and update Rider's Unity editor plugin'.");
           return;
         }
 
