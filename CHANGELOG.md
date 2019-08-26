@@ -1,5 +1,13 @@
 # Code Editor Package for Rider
 
+## [1.1.1] - 2019-08-26
+
+parse nowarn in csc.rsp
+warning, when Unity was started from Rider, but external editor was different
+improved unit test support
+workaround to avoid Unity internal project-generation (fix #28)
+
+
 ## [1.1.0] - 2019-07-02
 
 new setting to manage list of extensions to be opened with Rider

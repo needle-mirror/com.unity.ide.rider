@@ -1,7 +1,5 @@
 using System;
 using System.IO;
-using System.Linq;
-using System.Reflection;
 using UnityEngine;
 
 namespace Packages.Rider.Editor
@@ -34,7 +32,7 @@ namespace Packages.Rider.Editor
           else
           {
             AppDomain.CurrentDomain.Load(bytes);
-            // AppDomain.CurrentDomain.Load(AssemblyName.GetAssemblyName(dllFile.FullName)); // use this for external source debug
+            //AppDomain.CurrentDomain.Load(AssemblyName.GetAssemblyName(dllFile.FullName)); // use this for external source debug
           }
           EditorPluginInterop.InitEntryPoint();
         }

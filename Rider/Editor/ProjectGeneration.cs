@@ -129,6 +129,7 @@ namespace Packages.Rider.Editor
     public TestSettings Settings { get; set; }
     readonly string m_ProjectName;
     readonly IAssemblyNameProvider m_AssemblyNameProvider;
+    internal static bool isRiderProjectGeneration; // workaround to https://github.cds.internal.unity3d.com/unity/com.unity.ide.rider/issues/28
 
     const string k_ToolsVersion = "4.0";
     const string k_ProductVersion = "10.0.20506";
@@ -191,8 +192,9 @@ namespace Packages.Rider.Editor
     {
       SetupProjectSupportedExtensions();
       var types = GetAssetPostprocessorTypes();
+      isRiderProjectGeneration = true;
       bool externalCodeAlreadyGeneratedProjects = OnPreGeneratingCSProjectFiles(types);
-
+      isRiderProjectGeneration = false;
       if (!externalCodeAlreadyGeneratedProjects)
       {
         GenerateAndWriteSolutionAndProjects(types);
@@ -380,7 +382,7 @@ namespace Packages.Rider.Editor
       Type[] types)
     {
       SyncProjectFileIfNotChanged(ProjectFile(island),
-        ProjectText(island, allAssetsProjectParts, responseFilesData, allProjectIslands), types);
+        ProjectText(island, allAssetsProjectParts, responseFilesData.ToList(), allProjectIslands), types);
     }
 
     void SyncProjectFileIfNotChanged(string path, string newContents, Type[] types)
@@ -534,7 +536,7 @@ namespace Packages.Rider.Editor
 
     string ProjectText(Assembly assembly,
       Dictionary<string, string> allAssetsProjectParts,
-      IEnumerable<ResponseFileData> responseFilesData,
+      List<ResponseFileData> responseFilesData,
       List<Assembly> allProjectIslands)
     {
       var projectBuilder = new StringBuilder(ProjectHeader(assembly, responseFilesData));
@@ -645,7 +647,7 @@ namespace Packages.Rider.Editor
 
     string ProjectHeader(
       Assembly island,
-      IEnumerable<ResponseFileData> responseFilesData
+      List<ResponseFileData> responseFilesData
     )
     {
       var arguments = new object[]
@@ -662,7 +664,13 @@ namespace Packages.Rider.Editor
         k_TargetFrameworkVersion,
         PluginSettings.OverrideLangVersion?PluginSettings.LangVersion:k_TargetLanguageVersion,
         k_BaseDirectory,
-        island.compilerOptions.AllowUnsafeCode | responseFilesData.Any(x => x.Unsafe)
+        island.compilerOptions.AllowUnsafeCode | responseFilesData.Any(x => x.Unsafe),
+        responseFilesData.Select(x =>
+        {
+          const string start = "/nowarn:";
+          var codes = x.OtherArguments.FirstOrDefault(a => a.StartsWith(start))?.Substring(start.Length);
+          return codes != null ? "," + codes: string.Empty;
+        }).FirstOrDefault()
       };
 
       try
@@ -749,7 +757,7 @@ namespace Packages.Rider.Editor
         @"    <DefineConstants>{5}</DefineConstants>",
         @"    <ErrorReport>prompt</ErrorReport>",
         @"    <WarningLevel>4</WarningLevel>",
-        @"    <NoWarn>0169</NoWarn>",
+        @"    <NoWarn>0169{13}</NoWarn>",
         @"    <AllowUnsafeBlocks>{12}</AllowUnsafeBlocks>",
         @"  </PropertyGroup>",
         @"  <PropertyGroup Condition="" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' "">",
@@ -758,7 +766,7 @@ namespace Packages.Rider.Editor
         @"    <OutputPath>Temp\bin\Release\</OutputPath>",
         @"    <ErrorReport>prompt</ErrorReport>",
         @"    <WarningLevel>4</WarningLevel>",
-        @"    <NoWarn>0169</NoWarn>",
+        @"    <NoWarn>0169{13}</NoWarn>",
         @"    <AllowUnsafeBlocks>{12}</AllowUnsafeBlocks>",
         @"  </PropertyGroup>"
       };
