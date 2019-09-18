@@ -1,3 +1,4 @@
+#if TEST_FRAMEWORK
 using System;
 using System.Text;
 using UnityEditor.TestTools.TestRunner.Api;
@@ -79,3 +80,4 @@ namespace Packages.Rider.Editor.UnitTesting
         }
     }
 }
+#endif

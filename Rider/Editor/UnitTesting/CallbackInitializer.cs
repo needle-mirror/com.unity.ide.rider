@@ -1,3 +1,4 @@
+#if TEST_FRAMEWORK
 using UnityEditor;
 using UnityEditor.TestTools.TestRunner.Api;
 using UnityEngine;
@@ -14,3 +15,4 @@ namespace Packages.Rider.Editor.UnitTesting
     }
   }
 }
+#endif
