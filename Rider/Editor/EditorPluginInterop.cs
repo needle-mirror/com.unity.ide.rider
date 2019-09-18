@@ -3,7 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using UnityEngine;
+using Debug = UnityEngine.Debug;
 
 namespace Packages.Rider.Editor
 {
@@ -11,11 +11,26 @@ namespace Packages.Rider.Editor
   {
     private static string ourEntryPointTypeName = "JetBrains.Rider.Unity.Editor.PluginEntryPoint";
 
+    private static Assembly ourEditorPluginAssembly;
+
+    public static Assembly EditorPluginAssembly
+    {
+      get
+      {
+        if (ourEditorPluginAssembly != null)
+          return ourEditorPluginAssembly;
+        var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+        ourEditorPluginAssembly = assemblies.FirstOrDefault(a => a.GetName().Name.Equals("JetBrains.Rider.Unity.Editor.Plugin.Full.Repacked"));
+        return ourEditorPluginAssembly;
+      }
+    }
+
+
     private static void DisableSyncSolutionOnceCallBack()
     {
       // RiderScriptableSingleton.Instance.CsprojProcessedOnce = true;
       // Otherwise EditorPlugin regenerates all on every AppDomain reload
-      var assembly = GetEditorPluginAssembly();
+      var assembly = EditorPluginAssembly;
       if (assembly == null) return;
       var type = assembly.GetType("JetBrains.Rider.Unity.Editor.Utils.RiderScriptableSingleton");
       if (type == null) return;
@@ -35,7 +50,7 @@ namespace Packages.Rider.Editor
       {
         try
         {
-          var assembly = GetEditorPluginAssembly();
+          var assembly = EditorPluginAssembly;
           if (assembly == null) return null;
           var type = assembly.GetType(ourEntryPointTypeName);
           if (type == null) return null;
@@ -58,7 +73,7 @@ namespace Packages.Rider.Editor
       // reflection for fast OpenFileLineCol, when Rider is started and protocol connection is established
       try
       {
-        var assembly = GetEditorPluginAssembly();
+        var assembly = EditorPluginAssembly;
         if (assembly == null) return false;
         var type = assembly.GetType(ourEntryPointTypeName);
         if (type == null) return false;
@@ -83,33 +98,31 @@ namespace Packages.Rider.Editor
       return openResult;
     }
 
-    public static Assembly GetEditorPluginAssembly()
+    public static bool EditorPluginIsLoadedFromAssets(Assembly assembly)
     {
-      var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-      var assembly = assemblies.FirstOrDefault(a => a.GetName().Name.Equals("JetBrains.Rider.Unity.Editor.Plugin.Full.Repacked"));
-      return assembly;
-    }
-
-    public static bool EditorPluginIsLoadedFromAssets()
-    {
-      var currentDir = Directory.GetCurrentDirectory();
-      var assembly = GetEditorPluginAssembly();
       if (assembly == null)
         return false;
       var location = assembly.Location;
+      var currentDir = Directory.GetCurrentDirectory();
       return location.StartsWith(currentDir, StringComparison.InvariantCultureIgnoreCase);
     }
 
 
-    internal static void InitEntryPoint()
+    internal static void InitEntryPoint(Assembly assembly)
     {
       try
       {
-        DisableSyncSolutionOnceCallBack(); // is require for Rider prior to 2019.2
+        if (Version.TryParse(RiderScriptEditorData.instance.currentEditorVersion, out var version))
+        {
+          if (version.Major < 192)
+            DisableSyncSolutionOnceCallBack(); // is require for Rider prior to 2019.2
+        }
+        else
+            DisableSyncSolutionOnceCallBack();
         
-        var type = GetEditorPluginAssembly().GetType("JetBrains.Rider.Unity.Editor.AfterUnity56.EntryPoint");
+        var type = assembly.GetType("JetBrains.Rider.Unity.Editor.AfterUnity56.EntryPoint");
         if (type == null) 
-          type = GetEditorPluginAssembly().GetType("JetBrains.Rider.Unity.Editor.UnitTesting.EntryPoint"); // oldRider
+          type = assembly.GetType("JetBrains.Rider.Unity.Editor.UnitTesting.EntryPoint"); // oldRider
         RuntimeHelpers.RunClassConstructor(type.TypeHandle);
       }
       catch (TypeInitializationException ex)

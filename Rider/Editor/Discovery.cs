@@ -389,7 +389,13 @@ namespace Packages.Rider.Editor
 
       public RiderInfo(string path, bool isToolbox)
       {
-        BuildVersion = GetBuildNumber(path);
+        if (path == RiderScriptEditor.CurrentEditor)
+        {
+          RiderScriptEditorData.instance.Init();
+          BuildVersion = RiderScriptEditorData.instance.currentEditorVersion;
+        }
+        else
+          BuildVersion = GetBuildNumber(path);
         Path = new FileInfo(path).FullName; // normalize separators
         var presentation = "Rider " + BuildVersion;
         if (isToolbox)
