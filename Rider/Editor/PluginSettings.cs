@@ -1,4 +1,3 @@
-using System.Reflection;
 using Unity.CodeEditor;
 using UnityEditor;
 using UnityEngine;
@@ -14,18 +13,6 @@ namespace Packages.Rider.Editor
       {
         EditorPrefs.SetInt("Rider_SelectedLoggingLevel", (int) value);
       }
-    }
-
-    public static bool OverrideLangVersion
-    {
-      get { return EditorPrefs.GetBool("Rider_OverrideLangVersion", false); }
-      private set { EditorPrefs.SetBool("Rider_OverrideLangVersion", value);; }
-    }
-
-    public static string LangVersion
-    {
-      get { return EditorPrefs.GetString("Rider_LangVersion", "4"); }
-      private set { EditorPrefs.SetString("Rider_LangVersion", value); }
     }
 
     public static bool LogEventsCollectorEnabled
@@ -71,22 +58,6 @@ namespace Packages.Rider.Editor
             EditorGUILayout.Toggle(new GUIContent("Pass Console to Rider:"), LogEventsCollectorEnabled);
 
           GUILayout.EndVertical();
-
-          OverrideLangVersion = EditorGUILayout.Toggle(new GUIContent("Override LangVersion:"), OverrideLangVersion);
-          if (OverrideLangVersion)
-          {
-            var workaroundUrl = "https://gist.github.com/van800/875ce55eaf88d65b105d010d7b38a8d4";
-            var workaroundText = "Use this <color=#0000FF>workaround</color> if overriding doesn't work.";
-            var helpLangVersion = @"Avoid overriding, unless there is no particular need.";
-
-            LangVersion =
-              EditorGUILayout.TextField(
-                new GUIContent("LangVersion:",
-                  helpLangVersion), LangVersion);
-            LinkButton(caption: workaroundText, url: workaroundUrl);
-            EditorGUILayout.HelpBox(helpLangVersion, MessageType.None);
-          }
-
           GUILayout.Label("");
 
           if (!string.IsNullOrEmpty(EditorPluginInterop.LogPath))

@@ -26,20 +26,50 @@ namespace Packages.Rider.Editor
         CodeEditor.Register(editor);
         var path = GetEditorRealPath(CodeEditor.CurrentEditorInstallation);
         
-        if (!RiderScriptEditorData.instance.InitializedOnce)
-        {
-          ShowWarningOnUnexpectedScriptEditor(path);
-          RiderScriptEditorData.instance.InitializedOnce = true;
-        }
-        
         if (IsRiderInstallation(path))
         {
+          if (!RiderScriptEditorData.instance.InitializedOnce)
+          {
+            var installations = editor.Installations;
+            // is toolbox and outdated - update
+            if (installations.Any() && RiderPathLocator.IsToolbox(path) && installations.All(a => a.Path != path))
+            {
+              var toolboxInstallations = installations.Where(a => a.Name.Contains("(JetBrains Toolbox)")).ToArray();
+              if (toolboxInstallations.Any())
+              {
+                var newEditor = toolboxInstallations.Last().Path;
+                CodeEditor.SetExternalScriptEditor(newEditor);
+                path = newEditor;  
+              }
+              else
+              {
+                var newEditor = installations.Last().Path;
+                CodeEditor.SetExternalScriptEditor(newEditor);
+                path = newEditor;  
+              }
+            }
+            
+            // is non toolbox and outdated - notify
+            if (installations.Any() && installations.All(a => a.Path != path))
+            {
+              var newEditorName = installations.Last().Name;
+              Debug.LogWarning($"Consider updating External Editor in Unity to Rider {newEditorName}.");
+            }
+
+            ShowWarningOnUnexpectedScriptEditor(path);
+            RiderScriptEditorData.instance.InitializedOnce = true;
+          }
+
           RiderScriptEditorData.instance.Init();
           if (!FileSystemUtil.EditorPathExists(path)) // previously used rider was removed
           {
-            var newEditor = editor.Installations.Last().Path;
-            CodeEditor.SetExternalScriptEditor(newEditor);
-            path = newEditor;
+            var installations = editor.Installations;
+            if (installations.Any())
+            {
+              var newEditor = installations.Last().Path;
+              CodeEditor.SetExternalScriptEditor(newEditor);
+              path = newEditor;  
+            }
           }
 
           editor.CreateSolutionIfDoesntExist();
@@ -147,7 +177,7 @@ namespace Packages.Rider.Editor
     {
       get
       {
-        var customExtensions = new[] {"json", "asmdef", "log"};
+        var customExtensions = new[] {"json", "asmdef", "log", "xaml"};
         return EditorSettings.projectGenerationBuiltinExtensions.Concat(EditorSettings.projectGenerationUserExtensions)
           .Concat(customExtensions).Distinct().ToArray();
       }
@@ -336,6 +366,9 @@ namespace Packages.Rider.Editor
 
     public static bool IsRiderInstallation(string path)
     {
+      if (IsAssetImportWorkerProcess())
+        return false;
+      
       if (string.IsNullOrEmpty(path))
       {
         return false;
@@ -344,6 +377,14 @@ namespace Packages.Rider.Editor
       var fileInfo = new FileInfo(path);
       var filename = fileInfo.Name.ToLowerInvariant();
       return filename.StartsWith("rider", StringComparison.Ordinal);
+    }
+
+    private static bool IsAssetImportWorkerProcess()
+    {
+#if UNITY_2019_3_OR_NEWER
+      return UnityEditor.Experimental.AssetDatabaseExperimental.IsAssetImportWorkerProcess();
+#endif
+      return false;
     }
 
     public static string CurrentEditor // works fast, doesn't validate if executable really exists

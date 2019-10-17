@@ -1,11 +1,22 @@
 # Code Editor Package for Rider
 
+## [1.1.3] - 2019-10-17
+
+ - Update External Editor, when new toolbox build was installed
+ - Add xaml to default list of extensions to include in csproj
+ - Avoid initializing Rider package in secondary Unity process, which does Asset processing
+ - Reflect multiple csc.rsp arguments to generated csproj files: https://github.com/JetBrains/resharper-unity/issues/1337
+ - Setting, which allowed to override LangVersion removed in favor of langversion in csc.rsp
+ - Environment.NewLine is used in generated project files instead of Windows line separator.
+
 ## [1.1.2] - 2019-09-18
 
 performance optimizations:
-avoid multiple evaluations
-avoid reflection in DisableSyncSolutionOnceCallBack
-project generation optimization
+ - avoid multiple evaluations
+ - avoid reflection in DisableSyncSolutionOnceCallBack
+ - project generation optimization
+fixes:
+ - avoid compilation error with incompatible `Test Framework` package
 
 ## [1.1.1] - 2019-08-26
 
