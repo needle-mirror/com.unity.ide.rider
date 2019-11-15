@@ -1,8 +1,7 @@
-using System;
 using System.IO;
 using System.Text;
 
-namespace Packages.Rider.Editor {
+namespace Packages.Rider.Editor.ProjectGeneration {
   class FileIOProvider : IFileIO
   {
     public bool Exists(string fileName)

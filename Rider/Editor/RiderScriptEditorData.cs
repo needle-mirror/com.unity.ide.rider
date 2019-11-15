@@ -6,24 +6,28 @@ namespace Packages.Rider.Editor
 {
   public class RiderScriptEditorData : ScriptableSingleton<RiderScriptEditorData>
   {
-    [SerializeField] internal bool HasChanges = true; // sln/csproj files were changed 
+    [SerializeField] internal bool hasChanges = true; // sln/csproj files were changed 
     [SerializeField] internal bool shouldLoadEditorPlugin;
-    [SerializeField] internal bool InitializedOnce;
-    [SerializeField] internal string currentEditorVersion;
+    [SerializeField] internal bool initializedOnce;
+    [SerializeField] internal Version editorBuildNumber;
+    [SerializeField] internal RiderPathLocator.ProductInfo productInfo;
 
     public void Init()
     {
-      if (string.IsNullOrEmpty(currentEditorVersion))
+      if (editorBuildNumber == null)
+      {
         Invalidate(RiderScriptEditor.CurrentEditor);
+      }
     }
 
     public void Invalidate(string editorInstallationPath)
     {
-      currentEditorVersion = RiderPathLocator.GetBuildNumber(editorInstallationPath);
-      if (!Version.TryParse(currentEditorVersion, out var version))
+      editorBuildNumber = RiderPathLocator.GetBuildNumber(editorInstallationPath);
+      productInfo = RiderPathLocator.GetBuildVersion(editorInstallationPath);
+      if (editorBuildNumber == null)
         shouldLoadEditorPlugin = false;
 
-      shouldLoadEditorPlugin = version >= new Version("191.7141.156");
+      shouldLoadEditorPlugin = editorBuildNumber >= new Version("191.7141.156");
     }
   }
 }

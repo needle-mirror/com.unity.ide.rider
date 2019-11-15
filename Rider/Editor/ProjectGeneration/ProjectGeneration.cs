@@ -12,8 +12,9 @@ using UnityEditor.Compilation;
 using UnityEditor.PackageManager;
 using UnityEditorInternal;
 using UnityEngine;
+using Assembly = UnityEditor.Compilation.Assembly;
 
-namespace Packages.Rider.Editor
+namespace Packages.Rider.Editor.ProjectGeneration
 {
   public interface IGenerator
   {
@@ -22,6 +23,7 @@ namespace Packages.Rider.Editor
     bool HasSolutionBeenGenerated();
     string SolutionFile();
     string ProjectDirectory { get; }
+    IAssemblyNameProvider AssemblyNameProvider { get; }
     void GenerateAll(bool generateAll);
   }
 
@@ -41,15 +43,25 @@ namespace Packages.Rider.Editor
 
   public interface IAssemblyNameProvider
   {
+    string[] ProjectSupportedExtensions { get; }
+    string ProjectGenerationRootNamespace { get; }
     string GetAssemblyNameFromScriptPath(string path);
+    bool IsInternalizedPackagePath(string path);
     IEnumerable<Assembly> GetAssemblies(Func<string, bool> shouldFileBePartOfSolution);
     IEnumerable<string> GetAllAssetPaths();
     UnityEditor.PackageManager.PackageInfo FindForAssetPath(string assetPath);
     ResponseFileData ParseResponseFile(string responseFilePath, string projectDirectory, string[] systemReferenceDirectories);
+    void GeneratePlayerProjects(bool generatePlayerProjects);
   }
 
-  class AssemblyNameProvider : IAssemblyNameProvider
+  public class AssemblyNameProvider : IAssemblyNameProvider
   {
+    bool m_generatePlayerProjects;
+
+    public string[] ProjectSupportedExtensions => EditorSettings.projectGenerationUserExtensions;
+
+    public string ProjectGenerationRootNamespace => EditorSettings.projectGenerationRootNamespace;
+
     public string GetAssemblyNameFromScriptPath(string path)
     {
       return CompilationPipeline.GetAssemblyNameFromScriptPath(path);
@@ -57,8 +69,31 @@ namespace Packages.Rider.Editor
 
     public IEnumerable<Assembly> GetAssemblies(Func<string, bool> shouldFileBePartOfSolution)
     {
-      return CompilationPipeline.GetAssemblies()
-        .Where(i => 0 < i.sourceFiles.Length && i.sourceFiles.Any(shouldFileBePartOfSolution));
+      foreach (var assembly in CompilationPipeline.GetAssemblies())
+      {
+        if (0 < assembly.sourceFiles.Length && assembly.sourceFiles.Any(shouldFileBePartOfSolution))
+        {
+          yield return assembly;
+        }
+      }
+      if (m_generatePlayerProjects)
+      {
+        foreach (var assembly in CompilationPipeline.GetAssemblies(AssembliesType.Player))
+        {
+          if (0 < assembly.sourceFiles.Length && assembly.sourceFiles.Any(shouldFileBePartOfSolution))
+          {
+            yield return new Assembly(assembly.name + "-player", assembly.outputPath, assembly.sourceFiles, assembly.defines, assembly.assemblyReferences, assembly.compiledAssemblyReferences, assembly.flags)
+            {
+              compilerOptions =
+              {
+                ResponseFiles = assembly.compilerOptions.ResponseFiles,
+                AllowUnsafeCode = assembly.compilerOptions.AllowUnsafeCode,
+                ApiCompatibilityLevel = assembly.compilerOptions.ApiCompatibilityLevel
+              }
+            };
+          }
+        }
+      }
     }
 
     public IEnumerable<string> GetAllAssetPaths()
@@ -71,6 +106,21 @@ namespace Packages.Rider.Editor
       return UnityEditor.PackageManager.PackageInfo.FindForAssetPath(assetPath);
     }
 
+    public bool IsInternalizedPackagePath(string path)
+    {
+      if (string.IsNullOrEmpty(path.Trim()))
+      {
+        return false;
+      }
+      var packageInfo = FindForAssetPath(path);
+      if (packageInfo == null)
+      {
+        return false;
+      }
+      var packageSource = packageInfo.source;
+      return packageSource != PackageSource.Embedded && packageSource != PackageSource.Local;
+    }
+
     public ResponseFileData ParseResponseFile(string responseFilePath, string projectDirectory, string[] systemReferenceDirectories)
     {
       return CompilationPipeline.ParseResponseFile(
@@ -78,6 +128,11 @@ namespace Packages.Rider.Editor
         projectDirectory,
         systemReferenceDirectories
       );
+    }
+
+    public void GeneratePlayerProjects(bool generatePlayerProjects)
+    {
+      m_generatePlayerProjects = generatePlayerProjects;
     }
   }
 
@@ -155,9 +210,7 @@ namespace Packages.Rider.Editor
     const string k_TargetFrameworkVersion = "v4.7.1";
     const string k_TargetLanguageVersion = "latest";
 
-    static readonly Regex scriptReferenceExpression = new Regex(
-      @"^Library.ScriptAssemblies.(?<dllname>(?<project>.*)\.dll$)",
-      RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    IAssemblyNameProvider IGenerator.AssemblyNameProvider => m_AssemblyNameProvider;
 
     public ProjectGeneration() : this(Directory.GetParent(Application.dataPath).FullName)
     {
@@ -233,7 +286,7 @@ namespace Packages.Rider.Editor
 
     void SetupProjectSupportedExtensions()
     {
-      m_ProjectSupportedExtensions = EditorSettings.projectGenerationUserExtensions;
+      m_ProjectSupportedExtensions = m_AssemblyNameProvider.ProjectSupportedExtensions;
     }
 
     bool ShouldFileBePartOfSolution(string file)
@@ -241,7 +294,7 @@ namespace Packages.Rider.Editor
       string extension = Path.GetExtension(file);
 
       // Exclude files coming from packages except if they are internalized.
-      if (!m_ShouldGenerateAll && IsInternalizedPackagePath(file))
+      if (!m_ShouldGenerateAll && m_AssemblyNameProvider.IsInternalizedPackagePath(file))
       {
         return false;
       }
@@ -343,7 +396,7 @@ namespace Packages.Rider.Editor
       foreach (string asset in m_AssemblyNameProvider.GetAllAssetPaths())
       {
         // Exclude files coming from packages except if they are internalized.
-        if (!m_ShouldGenerateAll && IsInternalizedPackagePath(asset))
+        if (!m_ShouldGenerateAll && m_AssemblyNameProvider.IsInternalizedPackagePath(asset))
         {
           continue;
         }
@@ -378,23 +431,6 @@ namespace Packages.Rider.Editor
         result[entry.Key] = entry.Value.ToString();
 
       return result;
-    }
-
-    bool IsInternalizedPackagePath(string file)
-    {
-      if (string.IsNullOrWhiteSpace(file))
-      {
-        return false;
-      }
-
-      var packageInfo = m_AssemblyNameProvider.FindForAssetPath(file);
-      if (packageInfo == null)
-      {
-        return false;
-      }
-
-      var packageSource = packageInfo.source;
-      return packageSource != PackageSource.Embedded && packageSource != PackageSource.Local;
     }
 
     void SyncProject(
@@ -563,7 +599,6 @@ namespace Packages.Rider.Editor
       var references = new List<string>();
       var projectReferences = new List<Match>();
 
-      var kWindowsNewline = Environment.NewLine;
       foreach (string file in assembly.sourceFiles)
       {
         if (!ShouldFileBePartOfSolution(file))
@@ -573,7 +608,7 @@ namespace Packages.Rider.Editor
         var fullFile = EscapedRelativePathFor(file);
         if (".dll" != extension)
         {
-          projectBuilder.Append("     <Compile Include=\"").Append(fullFile).Append("\" />").Append(kWindowsNewline);
+          projectBuilder.Append("     <Compile Include=\"").Append(fullFile).Append("\" />").Append(Environment.NewLine);
         }
         else
         {
@@ -588,12 +623,6 @@ namespace Packages.Rider.Editor
       var islandRefs = references.Union(assembly.allReferences);
       foreach (string reference in islandRefs)
       {
-        if (reference.EndsWith("/UnityEditor.dll", StringComparison.Ordinal)
-            || reference.EndsWith("/UnityEngine.dll", StringComparison.Ordinal)
-            || reference.EndsWith("\\UnityEditor.dll", StringComparison.Ordinal)
-            || reference.EndsWith("\\UnityEngine.dll", StringComparison.Ordinal))
-          continue;
-
         var match = k_ScriptReferenceExpression.Match(reference);
         if (match.Success)
         {
@@ -629,13 +658,13 @@ namespace Packages.Rider.Editor
           var referencedProject = reference.Groups["project"].Value;
 
           projectBuilder.Append("    <ProjectReference Include=\"").Append(referencedProject)
-            .Append(GetProjectExtension()).Append("\">").Append(kWindowsNewline);
+            .Append(GetProjectExtension()).Append("\">").Append(Environment.NewLine);
           projectBuilder
             .Append("      <Project>{")
             .Append(m_GUIDGenerator.ProjectGuid(m_ProjectName, reference.Groups["project"].Value))
             .Append("}</Project>")
-            .Append(kWindowsNewline);
-          projectBuilder.Append("      <Name>").Append(referencedProject).Append("</Name>").Append(kWindowsNewline);
+            .Append(Environment.NewLine);
+          projectBuilder.Append("      <Name>").Append(referencedProject).Append("</Name>").Append(Environment.NewLine);
           projectBuilder.AppendLine("    </ProjectReference>");
         }
       }
@@ -649,11 +678,10 @@ namespace Packages.Rider.Editor
       //replace \ with / and \\ with /
       var escapedFullPath = SecurityElement.Escape(fullReference);
       escapedFullPath = escapedFullPath.Replace("\\\\", "/").Replace("\\", "/");
-      var kWindowsNewline = Environment.NewLine;
       projectBuilder.Append(" <Reference Include=\"").Append(FileSystemUtil.FileNameWithoutExtension(escapedFullPath))
-        .Append("\">").Append(kWindowsNewline);
-      projectBuilder.Append(" <HintPath>").Append(escapedFullPath).Append("</HintPath>").Append(kWindowsNewline);
-      projectBuilder.Append(" </Reference>").Append(kWindowsNewline);
+        .Append("\">").Append(Environment.NewLine);
+      projectBuilder.Append(" <HintPath>").Append(escapedFullPath).Append("</HintPath>").Append(Environment.NewLine);
+      projectBuilder.Append(" </Reference>").Append(Environment.NewLine);
     }
 
     public string ProjectFile(Assembly assembly)
@@ -674,7 +702,9 @@ namespace Packages.Rider.Editor
       var otherResponseFilesData = GetOtherArgumentsFromResponseFilesData(responseFilesData);
       var arguments = new object[]
       {
-        k_ToolsVersion, k_ProductVersion, m_GUIDGenerator.ProjectGuid(m_ProjectName, assembly.name),
+        k_ToolsVersion,
+        k_ProductVersion,
+        m_GUIDGenerator.ProjectGuid(m_ProjectName, assembly.name),
         InternalEditorUtility.GetEngineAssemblyPath(),
         InternalEditorUtility.GetEditorAssemblyPath(),
         string.Join(";",
@@ -682,7 +712,7 @@ namespace Packages.Rider.Editor
             .Concat(responseFilesData.SelectMany(x => x.Defines)).Distinct().ToArray()),
         MSBuildNamespaceUri,
         assembly.name,
-        EditorSettings.projectGenerationRootNamespace,
+        m_AssemblyNameProvider.ProjectGenerationRootNamespace,
         k_TargetFrameworkVersion,
         GenerateLangVersion(otherResponseFilesData["langversion"]),
         k_BaseDirectory,
@@ -708,21 +738,20 @@ namespace Packages.Rider.Editor
       }
     }
 
-    private string GenerateDocumentationFile(IEnumerable<string> paths)
+    private static string GenerateDocumentationFile(IEnumerable<string> paths)
     {
       if (!paths.Any())
         return String.Empty;
-      
-      
+
       return $"{Environment.NewLine}{string.Join(Environment.NewLine, paths.Select(a => $"  <DocumentationFile>{a}</DocumentationFile>"))}";
     }
 
-    private string GenerateWarningAsError(IEnumerable<string> enumerable)
+    private static string GenerateWarningAsError(IEnumerable<string> enumerable)
     {
       string returnValue = String.Empty;
       bool allWarningsAsErrors = false;
       List<string> warningIds = new List<string>();
-      
+
       foreach (string s in enumerable)
       {
         if (s == "+") allWarningsAsErrors = true;
@@ -742,7 +771,7 @@ namespace Packages.Rider.Editor
       return $"{Environment.NewLine}{returnValue}";
     }
 
-    private string GenerateWarningLevel(IEnumerable<string> warningLevel)
+    private static string GenerateWarningLevel(IEnumerable<string> warningLevel)
     {
       var level = warningLevel.FirstOrDefault();
       if (!string.IsNullOrWhiteSpace(level))
@@ -778,7 +807,7 @@ namespace Packages.Rider.Editor
       return string.Join(Environment.NewLine,
         @"  </ItemGroup>",
         @"  <Import Project=""$(MSBuildToolsPath)\Microsoft.CSharp.targets"" />",
-        @"  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. ",
+        @"  <!-- To modify your build process, add your task inside one of the targets below and uncomment it.",
         @"       Other similar extension points exist, see Microsoft.Common.targets.",
         @"  <Target Name=""BeforeBuild"">",
         @"  </Target>",
@@ -848,25 +877,13 @@ namespace Packages.Rider.Editor
         @"  </PropertyGroup>"
       };
 
-      var itemGroupStart = new[]
-      {
-        @"  <ItemGroup>"
-      };
-
       var footer = new[]
       {
-        @"    <Reference Include=""UnityEngine"">",
-        @"      <HintPath>{3}</HintPath>",
-        @"    </Reference>",
-        @"    <Reference Include=""UnityEditor"">",
-        @"      <HintPath>{4}</HintPath>",
-        @"    </Reference>",
-        @"  </ItemGroup>{14}{15}",
-        @"  <ItemGroup>",
+        @"  {14}{15}<ItemGroup>",
         @""
       };
 
-      var pieces = header.Concat(forceExplicitReferences).Concat(itemGroupStart).Concat(footer).ToArray();
+      var pieces = header.Concat(forceExplicitReferences).Concat(footer).ToArray();
       return string.Join(Environment.NewLine, pieces);
     }
 
@@ -1029,7 +1046,7 @@ namespace Packages.Rider.Editor
 
     static string SkipPathPrefix(string path, string prefix)
     {
-      if (path.Replace("\\", "/").StartsWith($"{prefix}/"))
+      if (path.StartsWith($@"{prefix}\"))
         return path.Substring(prefix.Length + 1);
       return path;
     }
@@ -1070,23 +1087,11 @@ namespace Packages.Rider.Editor
 
     static string ComputeGuidHashFor(string input)
     {
-      var hash = MD5.Create().ComputeHash(Encoding.Default.GetBytes(input));
-      return HashAsGuid(HashToString(hash));
-    }
-
-    static string HashAsGuid(string hash)
-    {
-      var guid = hash.Substring(0, 8) + "-" + hash.Substring(8, 4) + "-" + hash.Substring(12, 4) + "-" +
-                 hash.Substring(16, 4) + "-" + hash.Substring(20, 12);
-      return guid.ToUpper();
-    }
-
-    static string HashToString(byte[] bs)
-    {
-      var sb = new StringBuilder();
-      foreach (byte b in bs)
-        sb.Append(b.ToString("x2"));
-      return sb.ToString();
+      using (var md5 = MD5.Create())
+      {
+        var hash = md5.ComputeHash(Encoding.Default.GetBytes(input));
+        return new Guid(hash).ToString();
+      }
     }
   }
 }

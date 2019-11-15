@@ -16,17 +16,23 @@ namespace Packages.Rider.Editor
           return;
         }
 
-        var dllName = "JetBrains.Rider.Unity.Editor.Plugin.Full.Repacked.dll";
         var relPath = "../../plugins/rider-unity/EditorPlugin";
         if (SystemInfo.operatingSystemFamily == OperatingSystemFamily.MacOSX)
           relPath = "Contents/plugins/rider-unity/EditorPlugin";
-        var dllFile = new FileInfo(Path.Combine(Path.Combine(editorPath, relPath), dllName));
+        var baseDir = Path.Combine(editorPath, relPath);
+        var dllFile = new FileInfo(Path.Combine(baseDir, $"{EditorPluginInterop.EditorPluginAssemblyName}.dll"));
+        
+        if (!dllFile.Exists)
+          dllFile = new FileInfo(Path.Combine(baseDir, $"{EditorPluginInterop.EditorPluginAssemblyNameFallback}.dll"));
 
         if (dllFile.Exists)
         {
           var bytes = File.ReadAllBytes(dllFile.FullName); 
           assembly = AppDomain.CurrentDomain.Load(bytes); // doesn't lock assembly on disk
           // assembly = AppDomain.CurrentDomain.Load(AssemblyName.GetAssemblyName(dllFile.FullName)); // use this for external source debug
+          if (PluginSettings.SelectedLoggingLevel >= LoggingLevel.TRACE)
+            Debug.Log($"Rider EditorPluging loaded from {dllFile.FullName}");
+          
           EditorPluginInterop.InitEntryPoint(assembly);
         }
         else
