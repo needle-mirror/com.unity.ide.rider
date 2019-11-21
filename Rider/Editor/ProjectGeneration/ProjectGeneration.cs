@@ -563,7 +563,6 @@ namespace Packages.Rider.Editor
       var references = new List<string>();
       var projectReferences = new List<Match>();
 
-      var kWindowsNewline = Environment.NewLine;
       foreach (string file in assembly.sourceFiles)
       {
         if (!ShouldFileBePartOfSolution(file))
@@ -573,7 +572,7 @@ namespace Packages.Rider.Editor
         var fullFile = EscapedRelativePathFor(file);
         if (".dll" != extension)
         {
-          projectBuilder.Append("     <Compile Include=\"").Append(fullFile).Append("\" />").Append(kWindowsNewline);
+          projectBuilder.Append("     <Compile Include=\"").Append(fullFile).Append("\" />").Append(Environment.NewLine);
         }
         else
         {
@@ -629,13 +628,13 @@ namespace Packages.Rider.Editor
           var referencedProject = reference.Groups["project"].Value;
 
           projectBuilder.Append("    <ProjectReference Include=\"").Append(referencedProject)
-            .Append(GetProjectExtension()).Append("\">").Append(kWindowsNewline);
+            .Append(GetProjectExtension()).Append("\">").Append(Environment.NewLine);
           projectBuilder
             .Append("      <Project>{")
             .Append(m_GUIDGenerator.ProjectGuid(m_ProjectName, reference.Groups["project"].Value))
             .Append("}</Project>")
-            .Append(kWindowsNewline);
-          projectBuilder.Append("      <Name>").Append(referencedProject).Append("</Name>").Append(kWindowsNewline);
+            .Append(Environment.NewLine);
+          projectBuilder.Append("      <Name>").Append(referencedProject).Append("</Name>").Append(Environment.NewLine);
           projectBuilder.AppendLine("    </ProjectReference>");
         }
       }
@@ -649,11 +648,10 @@ namespace Packages.Rider.Editor
       //replace \ with / and \\ with /
       var escapedFullPath = SecurityElement.Escape(fullReference);
       escapedFullPath = escapedFullPath.Replace("\\\\", "/").Replace("\\", "/");
-      var kWindowsNewline = Environment.NewLine;
       projectBuilder.Append(" <Reference Include=\"").Append(FileSystemUtil.FileNameWithoutExtension(escapedFullPath))
-        .Append("\">").Append(kWindowsNewline);
-      projectBuilder.Append(" <HintPath>").Append(escapedFullPath).Append("</HintPath>").Append(kWindowsNewline);
-      projectBuilder.Append(" </Reference>").Append(kWindowsNewline);
+        .Append("\">").Append(Environment.NewLine);
+      projectBuilder.Append(" <HintPath>").Append(escapedFullPath).Append("</HintPath>").Append(Environment.NewLine);
+      projectBuilder.Append(" </Reference>").Append(Environment.NewLine);
     }
 
     public string ProjectFile(Assembly assembly)

@@ -1,5 +1,10 @@
 # Code Editor Package for Rider
 
+## [1.1.4] - 2019-11-21
+
+fix warning - unreachable code
+
+
 ## [1.1.3] - 2019-10-17
 
  - Update External Editor, when new toolbox build was installed
