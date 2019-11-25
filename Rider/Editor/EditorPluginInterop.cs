@@ -9,6 +9,9 @@ namespace Packages.Rider.Editor
 {
   public static class EditorPluginInterop
   {
+    private static string EditorPluginAssemblyNamePrefix = "JetBrains.Rider.Unity.Editor.Plugin.";
+    public static readonly string EditorPluginAssemblyName = $"{EditorPluginAssemblyNamePrefix}Net46.Repacked";
+    public static readonly string EditorPluginAssemblyNameFallback = $"{EditorPluginAssemblyNamePrefix}Full.Repacked";
     private static string ourEntryPointTypeName = "JetBrains.Rider.Unity.Editor.PluginEntryPoint";
 
     private static Assembly ourEditorPluginAssembly;
@@ -20,11 +23,10 @@ namespace Packages.Rider.Editor
         if (ourEditorPluginAssembly != null)
           return ourEditorPluginAssembly;
         var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-        ourEditorPluginAssembly = assemblies.FirstOrDefault(a => a.GetName().Name.Equals("JetBrains.Rider.Unity.Editor.Plugin.Full.Repacked"));
+        ourEditorPluginAssembly = assemblies.FirstOrDefault(a => a.GetName().Name.StartsWith(EditorPluginAssemblyNamePrefix));
         return ourEditorPluginAssembly;
       }
     }
-
 
     private static void DisableSyncSolutionOnceCallBack()
     {
@@ -112,7 +114,8 @@ namespace Packages.Rider.Editor
     {
       try
       {
-        if (Version.TryParse(RiderScriptEditorData.instance.currentEditorVersion, out var version))
+        var version = RiderScriptEditorData.instance.editorBuildNumber;
+        if (version != null)
         {
           if (version.Major < 192)
             DisableSyncSolutionOnceCallBack(); // is require for Rider prior to 2019.2

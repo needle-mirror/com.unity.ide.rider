@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Packages.Rider.Editor.UnitTesting
 {
-  public class TestsCallback : ScriptableObject, ICallbacks
+  public class TestsCallback : ScriptableObject, IErrorCallbacks
     {
         public void RunFinished(ITestResultAdaptor result)
         {
@@ -16,13 +16,20 @@ namespace Packages.Rider.Editor.UnitTesting
             new TestEvent(EventType.RunFinished, "", "","", 0, ParseTestStatus(result.TestStatus), ""));
           CallbackData.instance.RaiseChangedEvent();
         }
+        
+        public void RunStarted(ITestAdaptor testsToRun)
+        {
+          CallbackData.instance.events.Add(
+            new TestEvent(EventType.RunStarted, "", "","", 0, NUnit.Framework.Interfaces.TestStatus.Passed, ""));
+          CallbackData.instance.RaiseChangedEvent();
+        }
 
         public void TestStarted(ITestAdaptor result)
         {
           if (result.Method == null) return;
           
           CallbackData.instance.events.Add(
-            new TestEvent(EventType.TestStarted, GetUniqueName(result), result.Method.TypeInfo.Assembly.GetName().Name, "", 0, ParseTestStatus(TestStatus.Passed), result.ParentFullName));
+            new TestEvent(EventType.TestStarted, GetUniqueName(result), result.Method.TypeInfo.Assembly.GetName().Name, "", 0, NUnit.Framework.Interfaces.TestStatus.Passed, result.ParentFullName));
           CallbackData.instance.RaiseChangedEvent();
         }
 
@@ -34,7 +41,16 @@ namespace Packages.Rider.Editor.UnitTesting
             new TestEvent(EventType.TestFinished, GetUniqueName(result.Test), result.Test.Method.TypeInfo.Assembly.GetName().Name, ExtractOutput(result), result.Duration, ParseTestStatus(result.TestStatus), result.Test.ParentFullName));
           CallbackData.instance.RaiseChangedEvent();
         }
-        
+
+        public void OnError(string message)
+        {
+          CallbackData.instance.isRider = false;
+          
+          CallbackData.instance.events.Add(
+            new TestEvent(EventType.RunFinished, "", "",message, 0, NUnit.Framework.Interfaces.TestStatus.Failed, ""));
+          CallbackData.instance.RaiseChangedEvent();
+        }
+
         // todo: reimplement JetBrains.Rider.Unity.Editor.AfterUnity56.UnitTesting.TestEventsSender.GetUniqueName
         private static string GetUniqueName(ITestAdaptor test)
         {
@@ -42,10 +58,6 @@ namespace Packages.Rider.Editor.UnitTesting
           return str;
         }
 
-        public void RunStarted(ITestAdaptor testsToRun)
-        {
-        }
-        
         private static NUnit.Framework.Interfaces.TestStatus ParseTestStatus(TestStatus testStatus)
         {
           return (NUnit.Framework.Interfaces.TestStatus)Enum.Parse(typeof(NUnit.Framework.Interfaces.TestStatus), testStatus.ToString());

@@ -4,7 +4,7 @@ using NUnit.Framework.Interfaces;
 namespace Packages.Rider.Editor.UnitTesting
 {
   [Serializable]
-  public enum EventType { TestStarted, TestFinished, RunFinished }
+  public enum EventType { TestStarted, TestFinished, RunFinished, RunStarted } // do not reorder
 
   [Serializable]
   public class TestEvent
