@@ -1,5 +1,5 @@
 # Code Editor Package for Rider
-## [1.2.0] - 2019-11-25
+## [2.0.0] - 2019-11-25
 
 - Load optimised EditorPlugin version compiled to net 461, with fallback to previous version.
 - On ExternalEditor settings page: reorder Generate all ... after Extensions handled

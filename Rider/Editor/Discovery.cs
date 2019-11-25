@@ -474,9 +474,12 @@ namespace Packages.Rider.Editor
         Path = new FileInfo(path).FullName; // normalize separators
         var presentation = $"Rider {BuildNumber}";
 
-        if (ProductInfo !=null && !string.IsNullOrEmpty(ProductInfo.version) && !string.IsNullOrEmpty(ProductInfo.versionSuffix))
-          presentation = $"Rider {ProductInfo.version} {ProductInfo.versionSuffix}";
-        
+        if (ProductInfo != null && !string.IsNullOrEmpty(ProductInfo.version))
+        {
+          var suffix = string.IsNullOrEmpty(ProductInfo.versionSuffix) ? "" : $" {ProductInfo.versionSuffix}";
+          presentation = $"Rider {ProductInfo.version}{suffix}";
+        }
+
         if (isToolbox)
           presentation += " (JetBrains Toolbox)";
 
