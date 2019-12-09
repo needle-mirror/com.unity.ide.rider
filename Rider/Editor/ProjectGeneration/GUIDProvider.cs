@@ -1,4 +1,4 @@
-namespace Packages.Rider.Editor.ProjectGeneration {
+namespace Packages.Rider.Editor {
   class GUIDProvider : IGUIDGenerator
   {
     public string ProjectGuid(string projectName, string assemblyName)

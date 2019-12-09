@@ -2,7 +2,6 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using Packages.Rider.Editor.ProjectGeneration;
 using Packages.Rider.Editor.Util;
 using Unity.CodeEditor;
 using UnityEditor;
@@ -22,7 +21,7 @@ namespace Packages.Rider.Editor
     {
       try
       {
-        var projectGeneration = new ProjectGeneration.ProjectGeneration();
+        var projectGeneration = new ProjectGeneration();
         var editor = new RiderScriptEditor(new Discovery(), projectGeneration);
         CodeEditor.Register(editor);
         var path = GetEditorRealPath(CurrentEditor);
@@ -77,8 +76,6 @@ namespace Packages.Rider.Editor
           }
           RiderScriptEditorData.instance.Init();
 
-          RiderScriptEditorData.instance.Init();
-          
           editor.CreateSolutionIfDoesntExist();
           if (RiderScriptEditorData.instance.shouldLoadEditorPlugin)
           {

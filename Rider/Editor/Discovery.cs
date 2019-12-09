@@ -455,11 +455,13 @@ namespace Packages.Rider.Editor
       public bool IsToolbox;
       public string Presentation;
       public Version BuildNumber;
+      public string BuildVersion; // added for backward compatibility
       public ProductInfo ProductInfo;
       public string Path;
 
       public RiderInfo(string path, bool isToolbox)
       {
+        BuildVersion = string.Empty;
         if (path == RiderScriptEditor.CurrentEditor)
         {
           RiderScriptEditorData.instance.Init();
@@ -474,9 +476,12 @@ namespace Packages.Rider.Editor
         Path = new FileInfo(path).FullName; // normalize separators
         var presentation = $"Rider {BuildNumber}";
 
-        if (ProductInfo !=null && !string.IsNullOrEmpty(ProductInfo.version) && !string.IsNullOrEmpty(ProductInfo.versionSuffix))
-          presentation = $"Rider {ProductInfo.version} {ProductInfo.versionSuffix}";
-        
+        if (ProductInfo != null && !string.IsNullOrEmpty(ProductInfo.version))
+        {
+          var suffix = string.IsNullOrEmpty(ProductInfo.versionSuffix) ? "" : $" {ProductInfo.versionSuffix}";
+          presentation = $"Rider {ProductInfo.version}{suffix}";
+        }
+
         if (isToolbox)
           presentation += " (JetBrains Toolbox)";
 
