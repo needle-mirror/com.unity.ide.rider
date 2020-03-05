@@ -9,12 +9,12 @@ using UnityEngine;
 
 namespace Packages.Rider.Editor
 {
-  public interface IDiscovery
+  internal interface IDiscovery
   {
     CodeEditor.Installation[] PathCallback();
   }
 
-  public class Discovery : IDiscovery
+  internal class Discovery : IDiscovery
   {
     public CodeEditor.Installation[] PathCallback()
     {
@@ -33,10 +33,9 @@ namespace Packages.Rider.Editor
   /// This code is a modified version of the JetBrains resharper-unity plugin listed here:
   /// https://github.com/JetBrains/resharper-unity/blob/master/unity/JetBrains.Rider.Unity.Editor/EditorPlugin/RiderPathLocator.cs
   /// </summary>
-  public static class RiderPathLocator
+  internal static class RiderPathLocator
   {
 #if !(UNITY_4_7 || UNITY_5_5)
-    [UsedImplicitly] // Used in com.unity.ide.rider
     public static RiderInfo[] GetAllRiderPaths()
     {
       try
@@ -188,7 +187,7 @@ namespace Packages.Rider.Editor
         case OperatingSystemFamily.Windows:
         {
           var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-          return Path.Combine(localAppData, @"JetBrains\Toolbox\apps\Rider");
+          return GetToolboxRiderRootPath(localAppData);
         }
 
         case OperatingSystemFamily.MacOSX:
@@ -196,7 +195,8 @@ namespace Packages.Rider.Editor
           var home = Environment.GetEnvironmentVariable("HOME");
           if (!string.IsNullOrEmpty(home))
           {
-            return Path.Combine(home, @"Library/Application Support/JetBrains/Toolbox/apps/Rider");
+            var localAppData = Path.Combine(home, @"Library/Application Support");
+            return  GetToolboxRiderRootPath(localAppData);
           }
           break;
         }
@@ -206,12 +206,30 @@ namespace Packages.Rider.Editor
           var home = Environment.GetEnvironmentVariable("HOME");
           if (!string.IsNullOrEmpty(home))
           {
-            return Path.Combine(home, @".local/share/JetBrains/Toolbox/apps/Rider");
+            var localAppData = Path.Combine(home, @".local/share");
+            return GetToolboxRiderRootPath(localAppData);
           }
           break;
         }
       }
       return string.Empty;
+    }
+    
+    
+    private static string GetToolboxRiderRootPath(string localAppData)
+    {
+      var toolboxPath = Path.Combine(localAppData, @"JetBrains\Toolbox");
+      var settingsJson = Path.Combine(toolboxPath, ".settings.json");
+
+      if (File.Exists(settingsJson))
+      {
+        var path = SettingsJson.GetInstallLocationFromJson(File.ReadAllText(settingsJson));
+        if (!string.IsNullOrEmpty(path))
+          toolboxPath = path;
+      }
+
+      var toolboxRiderRootPath = Path.Combine(toolboxPath, @"apps\Rider");
+      return toolboxRiderRootPath;
     }
     
     internal static ProductInfo GetBuildVersion(string path)
@@ -240,7 +258,7 @@ namespace Packages.Rider.Editor
       return Version.TryParse(versionText, out var v) ? v : null;
     }
 
-    internal static bool IsToolbox(string path)
+    internal static bool GetIsToolbox(string path)
     {
       return path.StartsWith(GetToolboxBaseDir());
     }
@@ -257,23 +275,31 @@ namespace Packages.Rider.Editor
       }
       throw new Exception("Unknown OS");
     }
-
     private static void CollectPathsFromRegistry(string registryKey, List<string> installPaths)
     {
+      using (var key = Registry.CurrentUser.OpenSubKey(registryKey))
+      {
+        CollectPathsFromRegistry(installPaths, key);
+      }
       using (var key = Registry.LocalMachine.OpenSubKey(registryKey))
       {
-        if (key == null) return;
-        foreach (var subkeyName in key.GetSubKeyNames().Where(a => a.Contains("Rider")))
+        CollectPathsFromRegistry(installPaths, key);
+      }
+    }
+
+    private static void CollectPathsFromRegistry(List<string> installPaths, RegistryKey key)
+    {
+      if (key == null) return;
+      foreach (var subkeyName in key.GetSubKeyNames().Where(a => a.Contains("Rider")))
+      {
+        using (var subkey = key.OpenSubKey(subkeyName))
         {
-          using (var subkey = key.OpenSubKey(subkeyName))
-          {
-            var folderObject = subkey?.GetValue("InstallLocation");
-            if (folderObject == null) continue;
-            var folder = folderObject.ToString();
-            var possiblePath = Path.Combine(folder, @"bin\rider64.exe");
-            if (File.Exists(possiblePath))
-              installPaths.Add(possiblePath);
-          }
+          var folderObject = subkey?.GetValue("InstallLocation");
+          if (folderObject == null) continue;
+          var folder = folderObject.ToString();
+          var possiblePath = Path.Combine(folder, @"bin\rider64.exe");
+          if (File.Exists(possiblePath))
+            installPaths.Add(possiblePath);
         }
       }
     }
@@ -350,6 +376,32 @@ namespace Packages.Rider.Editor
     // Disable the "field is never assigned" compiler warning. We never assign it, but Unity does.
     // Note that Unity disable this warning in the generated C# projects
 #pragma warning disable 0649
+    
+    [Serializable]
+    class SettingsJson
+    {
+      // ReSharper disable once InconsistentNaming
+      public string install_location;
+      
+      [CanBeNull]
+      public static string GetInstallLocationFromJson(string json)
+      {
+        try
+        {
+#if UNITY_4_7 || UNITY_5_5
+          return JsonConvert.DeserializeObject<SettingsJson>(json).install_location;
+#else
+          return JsonUtility.FromJson<SettingsJson>(json).install_location;
+#endif
+        }
+        catch (Exception)
+        {
+          Logger.Warn($"Failed to get install_location from json {json}");
+        }
+
+        return null;
+      }
+    }
 
     [Serializable]
     class ToolboxHistory
@@ -389,7 +441,7 @@ namespace Packages.Rider.Editor
     }
 
     [Serializable]
-    public class ProductInfo
+    internal class ProductInfo
     {
       public string version;
       public string versionSuffix;
@@ -450,7 +502,7 @@ namespace Packages.Rider.Editor
 
 #pragma warning restore 0649
 
-    public struct RiderInfo
+    internal struct RiderInfo
     {
       public bool IsToolbox;
       public string Presentation;

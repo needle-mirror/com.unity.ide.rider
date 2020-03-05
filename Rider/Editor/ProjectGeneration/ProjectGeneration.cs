@@ -3,140 +3,18 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using Packages.Rider.Editor.Util;
 using UnityEditor;
 using UnityEditor.Compilation;
-using UnityEditor.PackageManager;
 using UnityEditorInternal;
 using UnityEngine;
 using Assembly = UnityEditor.Compilation.Assembly;
 
 namespace Packages.Rider.Editor.ProjectGeneration
 {
-  public interface IGenerator
-  {
-    bool SyncIfNeeded(IEnumerable<string> affectedFiles, IEnumerable<string> reimportedFiles);
-    void Sync();
-    bool HasSolutionBeenGenerated();
-    string SolutionFile();
-    string ProjectDirectory { get; }
-    IAssemblyNameProvider AssemblyNameProvider { get; }
-    void GenerateAll(bool generateAll);
-  }
-
-  public interface IFileIO
-  {
-    bool Exists(string fileName);
-
-    string ReadAllText(string fileName);
-    void WriteAllText(string fileName, string content);
-  }
-
-  public interface IGUIDGenerator
-  {
-    string ProjectGuid(string projectName, string assemblyName);
-    string SolutionGuid(string projectName, string extension);
-  }
-
-  public interface IAssemblyNameProvider
-  {
-    string[] ProjectSupportedExtensions { get; }
-    string ProjectGenerationRootNamespace { get; }
-    string GetAssemblyNameFromScriptPath(string path);
-    bool IsInternalizedPackagePath(string path);
-    IEnumerable<Assembly> GetAssemblies(Func<string, bool> shouldFileBePartOfSolution);
-    IEnumerable<string> GetAllAssetPaths();
-    UnityEditor.PackageManager.PackageInfo FindForAssetPath(string assetPath);
-    ResponseFileData ParseResponseFile(string responseFilePath, string projectDirectory, string[] systemReferenceDirectories);
-    void GeneratePlayerProjects(bool generatePlayerProjects);
-  }
-
-  public class AssemblyNameProvider : IAssemblyNameProvider
-  {
-    bool m_generatePlayerProjects;
-
-    public string[] ProjectSupportedExtensions => EditorSettings.projectGenerationUserExtensions;
-
-    public string ProjectGenerationRootNamespace => EditorSettings.projectGenerationRootNamespace;
-
-    public string GetAssemblyNameFromScriptPath(string path)
-    {
-      return CompilationPipeline.GetAssemblyNameFromScriptPath(path);
-    }
-
-    public IEnumerable<Assembly> GetAssemblies(Func<string, bool> shouldFileBePartOfSolution)
-    {
-      foreach (var assembly in CompilationPipeline.GetAssemblies())
-      {
-        if (0 < assembly.sourceFiles.Length && assembly.sourceFiles.Any(shouldFileBePartOfSolution))
-        {
-          yield return assembly;
-        }
-      }
-      if (m_generatePlayerProjects)
-      {
-        foreach (var assembly in CompilationPipeline.GetAssemblies(AssembliesType.Player))
-        {
-          if (0 < assembly.sourceFiles.Length && assembly.sourceFiles.Any(shouldFileBePartOfSolution))
-          {
-            yield return new Assembly(assembly.name + "-player", assembly.outputPath, assembly.sourceFiles, assembly.defines, assembly.assemblyReferences, assembly.compiledAssemblyReferences, assembly.flags)
-            {
-              compilerOptions =
-              {
-                ResponseFiles = assembly.compilerOptions.ResponseFiles,
-                AllowUnsafeCode = assembly.compilerOptions.AllowUnsafeCode,
-                ApiCompatibilityLevel = assembly.compilerOptions.ApiCompatibilityLevel
-              }
-            };
-          }
-        }
-      }
-    }
-
-    public IEnumerable<string> GetAllAssetPaths()
-    {
-      return AssetDatabase.GetAllAssetPaths();
-    }
-
-    public UnityEditor.PackageManager.PackageInfo FindForAssetPath(string assetPath)
-    {
-      return UnityEditor.PackageManager.PackageInfo.FindForAssetPath(assetPath);
-    }
-
-    public bool IsInternalizedPackagePath(string path)
-    {
-      if (string.IsNullOrEmpty(path.Trim()))
-      {
-        return false;
-      }
-      var packageInfo = FindForAssetPath(path);
-      if (packageInfo == null)
-      {
-        return false;
-      }
-      var packageSource = packageInfo.source;
-      return packageSource != PackageSource.Embedded && packageSource != PackageSource.Local;
-    }
-
-    public ResponseFileData ParseResponseFile(string responseFilePath, string projectDirectory, string[] systemReferenceDirectories)
-    {
-      return CompilationPipeline.ParseResponseFile(
-        responseFilePath,
-        projectDirectory,
-        systemReferenceDirectories
-      );
-    }
-
-    public void GeneratePlayerProjects(bool generatePlayerProjects)
-    {
-      m_generatePlayerProjects = generatePlayerProjects;
-    }
-  }
-
-  public class ProjectGeneration : IGenerator
+  internal class ProjectGeneration : IGenerator
   {
     enum ScriptingLanguage
     {
@@ -152,16 +30,16 @@ namespace Packages.Rider.Editor.ProjectGeneration
     static readonly Dictionary<string, ScriptingLanguage> k_BuiltinSupportedExtensions =
       new Dictionary<string, ScriptingLanguage>
       {
-        {"cs", ScriptingLanguage.CSharp},
-        {"uxml", ScriptingLanguage.None},
-        {"uss", ScriptingLanguage.None},
-        {"shader", ScriptingLanguage.None},
-        {"compute", ScriptingLanguage.None},
-        {"cginc", ScriptingLanguage.None},
-        {"hlsl", ScriptingLanguage.None},
-        {"glslinc", ScriptingLanguage.None},
-        {"template", ScriptingLanguage.None},
-        {"raytrace", ScriptingLanguage.None}
+        { "cs", ScriptingLanguage.CSharp },
+        { "uxml", ScriptingLanguage.None },
+        { "uss", ScriptingLanguage.None },
+        { "shader", ScriptingLanguage.None },
+        { "compute", ScriptingLanguage.None },
+        { "cginc", ScriptingLanguage.None },
+        { "hlsl", ScriptingLanguage.None },
+        { "glslinc", ScriptingLanguage.None },
+        { "template", ScriptingLanguage.None },
+        { "raytrace", ScriptingLanguage.None }
       };
 
     string m_SolutionProjectEntryTemplate = string.Join(Environment.NewLine,
@@ -174,7 +52,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
       @"        {{{0}}}.Release|Any CPU.ActiveCfg = Release|Any CPU",
       @"        {{{0}}}.Release|Any CPU.Build.0 = Release|Any CPU").Replace("    ", "\t");
 
-    static readonly string[] k_ReimportSyncExtensions = {".dll", ".asmdef"};
+    static readonly string[] k_ReimportSyncExtensions = { ".dll", ".asmdef" };
 
     /// <summary>
     /// Map ScriptingLanguages to project extensions
@@ -189,19 +67,14 @@ namespace Packages.Rider.Editor.ProjectGeneration
       RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     string[] m_ProjectSupportedExtensions = new string[0];
-    bool m_ShouldGenerateAll;
 
     public string ProjectDirectory { get; }
-
-    public void GenerateAll(bool generateAll)
-    {
-      m_ShouldGenerateAll = generateAll;
-    }
 
     readonly string m_ProjectName;
     readonly IAssemblyNameProvider m_AssemblyNameProvider;
     readonly IFileIO m_FileIOProvider;
     readonly IGUIDGenerator m_GUIDGenerator;
+
     internal static bool isRiderProjectGeneration; // workaround to https://github.cds.internal.unity3d.com/unity/com.unity.ide.rider/issues/28
 
     const string k_ToolsVersion = "4.0";
@@ -212,13 +85,11 @@ namespace Packages.Rider.Editor.ProjectGeneration
 
     IAssemblyNameProvider IGenerator.AssemblyNameProvider => m_AssemblyNameProvider;
 
-    public ProjectGeneration() : this(Directory.GetParent(Application.dataPath).FullName)
-    {
-    }
+    public ProjectGeneration()
+      : this(Directory.GetParent(Application.dataPath).FullName) { }
 
-    public ProjectGeneration(string tempDirectory) : this(tempDirectory, new AssemblyNameProvider(), new FileIOProvider(), new GUIDProvider())
-    {
-    }
+    public ProjectGeneration(string tempDirectory)
+      : this(tempDirectory, new AssemblyNameProvider(), new FileIOProvider(), new GUIDProvider()) { }
 
     public ProjectGeneration(string tempDirectory, IAssemblyNameProvider assemblyNameProvider, IFileIO fileIoProvider, IGUIDGenerator guidGenerator)
     {
@@ -244,7 +115,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
     public bool SyncIfNeeded(IEnumerable<string> affectedFiles, IEnumerable<string> reimportedFiles)
     {
       SetupProjectSupportedExtensions();
-      
+
       if (HasFilesBeenModified(affectedFiles, reimportedFiles))
       {
         Sync();
@@ -256,12 +127,13 @@ namespace Packages.Rider.Editor.ProjectGeneration
 
     bool HasFilesBeenModified(IEnumerable<string> affectedFiles, IEnumerable<string> reimportedFiles)
     {
-      return affectedFiles.Any(ShouldFileBePartOfSolution) || reimportedFiles.Any(ShouldSyncOnReimportedAsset);
+      var files = reimportedFiles as string[] ?? reimportedFiles.ToArray();
+      return affectedFiles.Any(ShouldFileBePartOfSolution) || files.Any(ShouldSyncOnReimportedAsset) || files.Any(a => new FileInfo(a).Name == "csc.rsp");
     }
 
     static bool ShouldSyncOnReimportedAsset(string asset)
     {
-      return k_ReimportSyncExtensions.Contains(new FileInfo(asset).Extension);
+      return k_ReimportSyncExtensions.Contains(Path.GetExtension(asset));
     }
 
     public void Sync()
@@ -291,13 +163,13 @@ namespace Packages.Rider.Editor.ProjectGeneration
 
     bool ShouldFileBePartOfSolution(string file)
     {
-      string extension = Path.GetExtension(file);
-
       // Exclude files coming from packages except if they are internalized.
-      if (!m_ShouldGenerateAll && m_AssemblyNameProvider.IsInternalizedPackagePath(file))
+      if (m_AssemblyNameProvider.IsInternalizedPackagePath(file))
       {
         return false;
       }
+
+      string extension = Path.GetExtension(file);
 
       // Dll's are not scripts but still need to be included..
       if (extension == ".dll")
@@ -358,7 +230,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
       foreach (Assembly assembly in allProjectIslands)
       {
         var responseFileData = ParseResponseFileData(assembly);
-        SyncProject(assembly, allAssetProjectParts, responseFileData, allProjectIslands, types);
+        SyncProject(assembly, allAssetProjectParts, responseFileData, types, GetAllRoslynAnalyzerPaths().ToArray());
       }
     }
 
@@ -389,6 +261,11 @@ namespace Packages.Rider.Editor.ProjectGeneration
       return responseFilesData.Select(x => x.Value);
     }
 
+    private IEnumerable<string> GetAllRoslynAnalyzerPaths()
+    {
+      return m_AssemblyNameProvider.GetRoslynAnalyzerPaths();
+    }
+
     Dictionary<string, string> GenerateAllAssetProjectParts()
     {
       Dictionary<string, StringBuilder> stringBuilders = new Dictionary<string, StringBuilder>();
@@ -396,7 +273,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
       foreach (string asset in m_AssemblyNameProvider.GetAllAssetPaths())
       {
         // Exclude files coming from packages except if they are internalized.
-        if (!m_ShouldGenerateAll && m_AssemblyNameProvider.IsInternalizedPackagePath(asset))
+        if (m_AssemblyNameProvider.IsInternalizedPackagePath(asset))
         {
           continue;
         }
@@ -437,11 +314,13 @@ namespace Packages.Rider.Editor.ProjectGeneration
       Assembly island,
       Dictionary<string, string> allAssetsProjectParts,
       IEnumerable<ResponseFileData> responseFilesData,
-      List<Assembly> allProjectIslands,
-      Type[] types)
+      Type[] types,
+      string[] roslynAnalyzerDllPaths)
     {
-      SyncProjectFileIfNotChanged(ProjectFile(island),
-        ProjectText(island, allAssetsProjectParts, responseFilesData.ToList(), allProjectIslands), types);
+      SyncProjectFileIfNotChanged(
+        ProjectFile(island),
+        ProjectText(island, allAssetsProjectParts, responseFilesData.ToList(), roslynAnalyzerDllPaths),
+        types);
     }
 
     void SyncProjectFileIfNotChanged(string path, string newContents, Type[] types)
@@ -520,7 +399,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
         var returnValue = method.Invoke(null, args);
         if (method.ReturnType == typeof(bool))
         {
-          result |= (bool) returnValue;
+          result |= (bool)returnValue;
         }
       }
 
@@ -531,7 +410,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
     {
       foreach (var type in types)
       {
-        var args = new[] {path, content};
+        var args = new[] { path, content };
         var method = type.GetMethod("OnGeneratedCSProject",
           System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic |
           System.Reflection.BindingFlags.Static);
@@ -543,7 +422,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
         var returnValue = method.Invoke(null, args);
         if (method.ReturnType == typeof(string))
         {
-          content = (string) returnValue;
+          content = (string)returnValue;
         }
       }
 
@@ -554,7 +433,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
     {
       foreach (var type in types)
       {
-        var args = new[] {path, content};
+        var args = new[] { path, content };
         var method = type.GetMethod("OnGeneratedSlnSolution",
           System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic |
           System.Reflection.BindingFlags.Static);
@@ -566,7 +445,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
         var returnValue = method.Invoke(null, args);
         if (method.ReturnType == typeof(string))
         {
-          content = (string) returnValue;
+          content = (string)returnValue;
         }
       }
 
@@ -593,11 +472,10 @@ namespace Packages.Rider.Editor.ProjectGeneration
     string ProjectText(Assembly assembly,
       Dictionary<string, string> allAssetsProjectParts,
       List<ResponseFileData> responseFilesData,
-      List<Assembly> allProjectIslands)
+      string[] roslynAnalyzerDllPaths)
     {
-      var projectBuilder = new StringBuilder(ProjectHeader(assembly, responseFilesData));
+      var projectBuilder = new StringBuilder(ProjectHeader(assembly, responseFilesData, roslynAnalyzerDllPaths));
       var references = new List<string>();
-      var projectReferences = new List<Match>();
 
       foreach (string file in assembly.sourceFiles)
       {
@@ -620,52 +498,32 @@ namespace Packages.Rider.Editor.ProjectGeneration
       if (allAssetsProjectParts.TryGetValue(assembly.name, out var additionalAssetsForProject))
         projectBuilder.Append(additionalAssetsForProject);
 
-      var islandRefs = references.Union(assembly.allReferences);
-      foreach (string reference in islandRefs)
+      var responseRefs = responseFilesData.SelectMany(x => x.FullPathReferences.Select(r => r));
+      var internalAssemblyReferences = assembly.assemblyReferences
+        .Where(i => !i.sourceFiles.Any(ShouldFileBePartOfSolution)).Select(i => i.outputPath);
+      var allReferences =
+        assembly.compiledAssemblyReferences
+          .Union(responseRefs)
+          .Union(references)
+          .Union(internalAssemblyReferences)
+          .Except(roslynAnalyzerDllPaths);
+
+      foreach (var reference in allReferences)
       {
-        var match = k_ScriptReferenceExpression.Match(reference);
-        if (match.Success)
-        {
-          // assume csharp language
-          // Add a reference to a project except if it's a reference to a script assembly
-          // that we are not generating a project for. This will be the case for assemblies
-          // coming from .assembly.json files in non-internalized packages.
-          var dllName = match.Groups["dllname"].Value;
-          if (allProjectIslands.Any(i => Path.GetFileName(i.outputPath) == dllName))
-          {
-            projectReferences.Add(match);
-            continue;
-          }
-        }
-
         string fullReference = Path.IsPathRooted(reference) ? reference : Path.Combine(ProjectDirectory, reference);
-
         AppendReference(fullReference, projectBuilder);
       }
 
-      var responseRefs = responseFilesData.SelectMany(x => x.FullPathReferences.Select(r => r));
-      foreach (var reference in responseRefs)
+      if (0 < assembly.assemblyReferences.Length)
       {
-        AppendReference(reference, projectBuilder);
-      }
-
-      if (0 < projectReferences.Count)
-      {
-        projectBuilder.AppendLine("  </ItemGroup>");
-        projectBuilder.AppendLine("  <ItemGroup>");
-        foreach (Match reference in projectReferences)
+        projectBuilder.Append("  </ItemGroup>").Append(Environment.NewLine);
+        projectBuilder.Append("  <ItemGroup>").Append(Environment.NewLine);
+        foreach (Assembly reference in assembly.assemblyReferences.Where(i => i.sourceFiles.Any(ShouldFileBePartOfSolution)))
         {
-          var referencedProject = reference.Groups["project"].Value;
-
-          projectBuilder.Append("    <ProjectReference Include=\"").Append(referencedProject)
-            .Append(GetProjectExtension()).Append("\">").Append(Environment.NewLine);
-          projectBuilder
-            .Append("      <Project>{")
-            .Append(m_GUIDGenerator.ProjectGuid(m_ProjectName, reference.Groups["project"].Value))
-            .Append("}</Project>")
-            .Append(Environment.NewLine);
-          projectBuilder.Append("      <Name>").Append(referencedProject).Append("</Name>").Append(Environment.NewLine);
-          projectBuilder.AppendLine("    </ProjectReference>");
+          projectBuilder.Append("    <ProjectReference Include=\"").Append(reference.name).Append(GetProjectExtension()).Append("\">").Append(Environment.NewLine);
+          projectBuilder.Append("      <Project>{").Append(ProjectGuid(reference)).Append("}</Project>").Append(Environment.NewLine);
+          projectBuilder.Append("      <Name>").Append(reference.name).Append("</Name>").Append(Environment.NewLine);
+          projectBuilder.Append("    </ProjectReference>").Append(Environment.NewLine);
         }
       }
 
@@ -686,7 +544,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
 
     public string ProjectFile(Assembly assembly)
     {
-      return Path.Combine(ProjectDirectory, $"{assembly.name}.csproj");
+      return Path.Combine(ProjectDirectory, $"{m_AssemblyNameProvider.GetProjectName(assembly.outputPath, assembly.name)}.csproj");
     }
 
     public string SolutionFile()
@@ -696,7 +554,8 @@ namespace Packages.Rider.Editor.ProjectGeneration
 
     string ProjectHeader(
       Assembly assembly,
-      List<ResponseFileData> responseFilesData
+      List<ResponseFileData> responseFilesData,
+      string[] roslynAnalyzerDllPaths
     )
     {
       var otherResponseFilesData = GetOtherArgumentsFromResponseFilesData(responseFilesData);
@@ -704,22 +563,26 @@ namespace Packages.Rider.Editor.ProjectGeneration
       {
         k_ToolsVersion,
         k_ProductVersion,
-        m_GUIDGenerator.ProjectGuid(m_ProjectName, assembly.name),
+        ProjectGuid(assembly),
         InternalEditorUtility.GetEngineAssemblyPath(),
         InternalEditorUtility.GetEditorAssemblyPath(),
-        string.Join(";",
-          new[] {"DEBUG", "TRACE"}.Concat(EditorUserBuildSettings.activeScriptCompilationDefines).Concat(assembly.defines)
-            .Concat(responseFilesData.SelectMany(x => x.Defines)).Distinct().ToArray()),
+        string.Join(";", assembly.defines.Concat(responseFilesData.SelectMany(x => x.Defines)).Distinct().ToArray()),
         MSBuildNamespaceUri,
         assembly.name,
+        assembly.outputPath,
         m_AssemblyNameProvider.ProjectGenerationRootNamespace,
         k_TargetFrameworkVersion,
         GenerateLangVersion(otherResponseFilesData["langversion"]),
         k_BaseDirectory,
         assembly.compilerOptions.AllowUnsafeCode | responseFilesData.Any(x => x.Unsafe),
         GenerateNoWarn(otherResponseFilesData["nowarn"].Distinct().ToArray()),
-        GenerateAnalyserItemGroup(otherResponseFilesData["analyzer"].Concat(otherResponseFilesData["a"]).SelectMany(x=>x.Split(';')).Distinct().ToArray()),
-        GenerateAnalyserAdditionalFiles(otherResponseFilesData["additionalfile"].SelectMany(x=>x.Split(';')).Distinct().ToArray()),
+        GenerateAnalyserItemGroup(
+          otherResponseFilesData["analyzer"].Concat(otherResponseFilesData["a"])
+            .SelectMany(x => x.Split(';'))
+            .Concat(roslynAnalyzerDllPaths)
+            .Distinct()
+            .ToArray()),
+        GenerateAnalyserAdditionalFiles(otherResponseFilesData["additionalfile"].SelectMany(x => x.Split(';')).Distinct().ToArray()),
         GenerateAnalyserRuleSet(otherResponseFilesData["ruleset"].Distinct().ToArray()),
         GenerateWarningLevel(otherResponseFilesData["warn"].Concat(otherResponseFilesData["w"]).Distinct()),
         GenerateWarningAsError(otherResponseFilesData["warnaserror"]),
@@ -825,44 +688,45 @@ namespace Packages.Rider.Editor.ProjectGeneration
         @"<?xml version=""1.0"" encoding=""utf-8""?>",
         @"<Project ToolsVersion=""{0}"" DefaultTargets=""Build"" xmlns=""{6}"">",
         @"  <PropertyGroup>",
-        @"    <LangVersion>{10}</LangVersion>",
+        @"    <LangVersion>{11}</LangVersion>",
         @"    <_TargetFrameworkDirectories>non_empty_path_generated_by_unity.rider.package</_TargetFrameworkDirectories>",
-        @"    <_FullFrameworkReferenceAssemblyPaths>non_empty_path_generated_by_unity.rider.package</_FullFrameworkReferenceAssemblyPaths>", 
-        @"    <DisableHandlePackageFileConflicts>true</DisableHandlePackageFileConflicts>{16}",
+        @"    <_FullFrameworkReferenceAssemblyPaths>non_empty_path_generated_by_unity.rider.package</_FullFrameworkReferenceAssemblyPaths>",
+        @"    <DisableHandlePackageFileConflicts>true</DisableHandlePackageFileConflicts>{17}",
         @"  </PropertyGroup>",
         @"  <PropertyGroup>",
         @"    <Configuration Condition="" '$(Configuration)' == '' "">Debug</Configuration>",
         @"    <Platform Condition="" '$(Platform)' == '' "">AnyCPU</Platform>",
         @"    <ProductVersion>{1}</ProductVersion>",
         @"    <SchemaVersion>2.0</SchemaVersion>",
-        @"    <RootNamespace>{8}</RootNamespace>",
+        @"    <RootNamespace>{9}</RootNamespace>",
         @"    <ProjectGuid>{{{2}}}</ProjectGuid>",
+        @"    <ProjectTypeGuids>{{E097FAD1-6243-4DAD-9C02-E9B9EFC3FFC1}};{{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}}</ProjectTypeGuids>",
         @"    <OutputType>Library</OutputType>",
         @"    <AppDesignerFolder>Properties</AppDesignerFolder>",
         @"    <AssemblyName>{7}</AssemblyName>",
-        @"    <TargetFrameworkVersion>{9}</TargetFrameworkVersion>",
+        @"    <TargetFrameworkVersion>{10}</TargetFrameworkVersion>",
         @"    <FileAlignment>512</FileAlignment>",
-        @"    <BaseDirectory>{11}</BaseDirectory>",
+        @"    <BaseDirectory>{12}</BaseDirectory>",
         @"  </PropertyGroup>",
         @"  <PropertyGroup Condition="" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' "">",
         @"    <DebugSymbols>true</DebugSymbols>",
         @"    <DebugType>full</DebugType>",
         @"    <Optimize>false</Optimize>",
-        @"    <OutputPath>Temp\bin\Debug\</OutputPath>",
+        @"    <OutputPath>{8}</OutputPath>",
         @"    <DefineConstants>{5}</DefineConstants>",
         @"    <ErrorReport>prompt</ErrorReport>",
-        @"    <WarningLevel>{17}</WarningLevel>",
-        @"    <NoWarn>0169{13}</NoWarn>",
-        @"    <AllowUnsafeBlocks>{12}</AllowUnsafeBlocks>{18}{19}",
+        @"    <WarningLevel>{18}</WarningLevel>",
+        @"    <NoWarn>{14}</NoWarn>",
+        @"    <AllowUnsafeBlocks>{13}</AllowUnsafeBlocks>{19}{20}",
         @"  </PropertyGroup>",
         @"  <PropertyGroup Condition="" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' "">",
         @"    <DebugType>pdbonly</DebugType>",
         @"    <Optimize>true</Optimize>",
         @"    <OutputPath>Temp\bin\Release\</OutputPath>",
         @"    <ErrorReport>prompt</ErrorReport>",
-        @"    <WarningLevel>{17}</WarningLevel>",
-        @"    <NoWarn>0169{13}</NoWarn>",
-        @"    <AllowUnsafeBlocks>{12}</AllowUnsafeBlocks>{18}{19}",
+        @"    <WarningLevel>{18}</WarningLevel>",
+        @"    <NoWarn>{14}</NoWarn>",
+        @"    <AllowUnsafeBlocks>{13}</AllowUnsafeBlocks>{19}{20}",
         @"  </PropertyGroup>"
       };
 
@@ -879,7 +743,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
 
       var footer = new[]
       {
-        @"  {14}{15}<ItemGroup>",
+        @"  {15}{16}<ItemGroup>",
         @""
       };
 
@@ -900,27 +764,28 @@ namespace Packages.Rider.Editor.ProjectGeneration
       var relevantIslands = RelevantIslandsForMode(islands);
       string projectEntries = GetProjectEntries(relevantIslands);
       string projectConfigurations = string.Join(Environment.NewLine,
-        relevantIslands.Select(i => GetProjectActiveConfigurations(m_GUIDGenerator.ProjectGuid(m_ProjectName, i.name))).ToArray());
+        relevantIslands.Select(i => GetProjectActiveConfigurations(ProjectGuid(i))).ToArray());
       return string.Format(GetSolutionText(), fileversion, vsversion, projectEntries, projectConfigurations);
     }
-    
+
     private static string GenerateAnalyserItemGroup(string[] paths)
     {
       //   <ItemGroup>
-        //      <Analyzer Include="..\packages\Comments_analyser.1.0.6626.21356\analyzers\dotnet\cs\Comments_analyser.dll" />
-        //      <Analyzer Include="..\packages\UnityEngineAnalyzer.1.0.0.0\analyzers\dotnet\cs\UnityEngineAnalyzer.dll" />
-        //  </ItemGroup>
-        if (!paths.Any())
-            return string.Empty;
+      //      <Analyzer Include="..\packages\Comments_analyser.1.0.6626.21356\analyzers\dotnet\cs\Comments_analyser.dll" />
+      //      <Analyzer Include="..\packages\UnityEngineAnalyzer.1.0.0.0\analyzers\dotnet\cs\UnityEngineAnalyzer.dll" />
+      //  </ItemGroup>
+      if (!paths.Any())
+        return string.Empty;
 
-        var analyserBuilder = new StringBuilder();
-        analyserBuilder.AppendLine("  <ItemGroup>");
-        foreach (var path in paths)
-        {
-          analyserBuilder.AppendLine($"    <Analyzer Include=\"{path}\" />");
-        }
-        analyserBuilder.AppendLine("  </ItemGroup>");
-        return analyserBuilder.ToString();
+      var analyserBuilder = new StringBuilder();
+      analyserBuilder.AppendLine("  <ItemGroup>");
+      foreach (var path in paths)
+      {
+        analyserBuilder.AppendLine($"    <Analyzer Include=\"{path}\" />");
+      }
+
+      analyserBuilder.AppendLine("  </ItemGroup>");
+      return analyserBuilder.ToString();
     }
 
     private static ILookup<string, string> GetOtherArgumentsFromResponseFilesData(List<ResponseFileData> responseFilesData)
@@ -941,7 +806,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
               const string warnaserror = "warnaserror";
               if (b.Substring(1).StartsWith(warnaserror))
               {
-                return new KeyValuePair<string,string>(warnaserror, b.Substring(warnaserror.Length+ 1) );
+                return new KeyValuePair<string, string>(warnaserror, b.Substring(warnaserror.Length + 1));
               }
 
               return default;
@@ -963,33 +828,33 @@ namespace Packages.Rider.Editor.ProjectGeneration
     private static string GenerateAnalyserRuleSet(string[] paths)
     {
       //<CodeAnalysisRuleSet>..\path\to\myrules.ruleset</CodeAnalysisRuleSet>
-        if (!paths.Any())
-            return string.Empty;
-      
-        return $"{Environment.NewLine}{string.Join(Environment.NewLine, paths.Select(a => $"  <CodeAnalysisRuleSet>{a}</CodeAnalysisRuleSet>"))}";
+      if (!paths.Any())
+        return string.Empty;
+
+      return $"{Environment.NewLine}{string.Join(Environment.NewLine, paths.Select(a => $"  <CodeAnalysisRuleSet>{a}</CodeAnalysisRuleSet>"))}";
     }
-    
+
     private static string GenerateAnalyserAdditionalFiles(string[] paths)
     {
       if (!paths.Any())
         return string.Empty;
-      
-      
+
       var analyserBuilder = new StringBuilder();
       analyserBuilder.AppendLine("  <ItemGroup>");
       foreach (var path in paths)
       {
         analyserBuilder.AppendLine($"    <AdditionalFiles Include=\"{path}\" />");
       }
+
       analyserBuilder.AppendLine("  </ItemGroup>");
       return analyserBuilder.ToString();
     }
-    
+
     private static string GenerateNoWarn(string[] codes)
     {
       if (!codes.Any())
         return string.Empty;
-      
+
       return $",{string.Join(",", codes)}";
     }
 
@@ -1010,7 +875,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
         m_GUIDGenerator.SolutionGuid(m_ProjectName, GetExtensionOfSourceFiles(i.sourceFiles)),
         i.name,
         Path.GetFileName(ProjectFile(i)),
-        m_GUIDGenerator.ProjectGuid(m_ProjectName, i.name)
+        ProjectGuid(i)
       ));
 
       return string.Join(Environment.NewLine, projectEntries.ToArray());
@@ -1067,31 +932,12 @@ namespace Packages.Rider.Editor.ProjectGeneration
     {
       return ".csproj";
     }
-  }
 
-  public static class SolutionGuidGenerator
-  {
-    public static string GuidForProject(string projectName)
+    string ProjectGuid(Assembly assembly)
     {
-      return ComputeGuidHashFor(projectName + "salt");
-    }
-
-    public static string GuidForSolution(string projectName, string sourceFileExtension)
-    {
-      if (sourceFileExtension.ToLower() == "cs")
-        // GUID for a C# class library: http://www.codeproject.com/Reference/720512/List-of-Visual-Studio-Project-Type-GUIDs
-        return "FAE04EC0-301F-11D3-BF4B-00C04F79EFBC";
-
-      return ComputeGuidHashFor(projectName);
-    }
-
-    static string ComputeGuidHashFor(string input)
-    {
-      using (var md5 = MD5.Create())
-      {
-        var hash = md5.ComputeHash(Encoding.Default.GetBytes(input));
-        return new Guid(hash).ToString();
-      }
+      return m_GUIDGenerator.ProjectGuid(
+        m_ProjectName,
+        m_AssemblyNameProvider.GetProjectName(assembly.outputPath, assembly.name));
     }
   }
 }

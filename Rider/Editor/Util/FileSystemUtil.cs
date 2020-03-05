@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace Packages.Rider.Editor.Util
 {
-  public static class FileSystemUtil
+  internal static class FileSystemUtil
   {
     [NotNull]
     public static string GetFinalPathName([NotNull] string path)

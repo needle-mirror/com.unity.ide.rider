@@ -7,7 +7,7 @@ using Debug = UnityEngine.Debug;
 
 namespace Packages.Rider.Editor
 {
-  public static class EditorPluginInterop
+  internal static class EditorPluginInterop
   {
     private static string EditorPluginAssemblyNamePrefix = "JetBrains.Rider.Unity.Editor.Plugin.";
     public static readonly string EditorPluginAssemblyName = $"{EditorPluginAssemblyNamePrefix}Net46.Repacked";

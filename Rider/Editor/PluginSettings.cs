@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Packages.Rider.Editor
 {
-  public class PluginSettings
+  internal class PluginSettings
   {
     public static LoggingLevel SelectedLoggingLevel
     {

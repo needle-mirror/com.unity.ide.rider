@@ -1,6 +1,6 @@
 namespace Packages.Rider.Editor
 {
-  public enum LoggingLevel
+  internal enum LoggingLevel
   {
     /// <summary>
     /// Do not use it in logging. Only in config to disable logging.

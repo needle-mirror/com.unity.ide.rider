@@ -3,7 +3,7 @@ using UnityEditor;
 
 namespace Packages.Rider.Editor.PostProcessors
 {
-  public class RiderAssetPostprocessor: AssetPostprocessor
+  internal class RiderAssetPostprocessor: AssetPostprocessor
   {
     public static bool OnPreGeneratingCSProjectFiles()
     {

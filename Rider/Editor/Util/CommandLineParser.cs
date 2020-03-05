@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace Packages.Rider.Editor.Util
 {
-  public class CommandLineParser
+  internal class CommandLineParser
   {
     public Dictionary<string, string> Options = new Dictionary<string, string>();
     

@@ -9,12 +9,29 @@ using System;
 
 namespace Packages.Rider.Editor.UnitTesting
 {
+  /// <summary>
+  /// Is called by Rider Unity plugin via reflections
+  /// </summary>
+  [UsedImplicitly]
   public static class RiderTestRunner
   {
 #if TEST_FRAMEWORK
     private static readonly TestsCallback Callback = ScriptableObject.CreateInstance<TestsCallback>();
 #endif
     
+    /// <summary>
+    /// Is called by Rider Unity plugin via reflections
+    /// </summary>
+    /// <param name="sessionId"></param>
+    /// <param name="testMode"></param>
+    /// <param name="assemblyNames"></param>
+    /// <param name="testNames"></param>
+    /// <param name="categoryNames"></param>
+    /// <param name="groupNames"></param>
+    /// <param name="buildTarget"></param>
+    /// <param name="callbacksHandlerCodeBase"></param>
+    /// <param name="callbacksHandlerTypeName"></param>
+    /// <param name="callbacksHandlerDependencies"></param>
     [UsedImplicitly]
     public static void RunTestsWithSyncCallbacks(string sessionId, int testMode, string[] assemblyNames, 
       string[] testNames, string[] categoryNames, string[] groupNames, int? buildTarget,  
@@ -29,6 +46,15 @@ namespace Packages.Rider.Editor.UnitTesting
 #endif      
     }
     
+    /// <summary>
+    /// Is called by Rider Unity plugin via reflections
+    /// </summary>
+    /// <param name="testMode"></param>
+    /// <param name="assemblyNames"></param>
+    /// <param name="testNames"></param>
+    /// <param name="categoryNames"></param>
+    /// <param name="groupNames"></param>
+    /// <param name="buildTarget"></param>
     [UsedImplicitly]
     public static void RunTests(int testMode, string[] assemblyNames, string[] testNames, string[] categoryNames, string[] groupNames, int? buildTarget)
     {

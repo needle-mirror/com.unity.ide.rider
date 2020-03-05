@@ -9,8 +9,10 @@
     ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
-    "overrideReferences": false,
-    "precompiledReferences": [],
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
     "autoReferenced": true,
     "defineConstraints": [],
     "versionDefines": [
@@ -19,5 +21,6 @@
             "expression": "1.1.1",
             "define": "TEST_FRAMEWORK"
         }
-    ]
+    ],
+    "noEngineReferences": false
 }

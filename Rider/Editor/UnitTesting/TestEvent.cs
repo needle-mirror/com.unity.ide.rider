@@ -3,9 +3,15 @@ using NUnit.Framework.Interfaces;
 
 namespace Packages.Rider.Editor.UnitTesting
 {
+  /// <summary>
+  /// Is used by Rider Unity plugin by reflection
+  /// </summary>
   [Serializable]
   public enum EventType { TestStarted, TestFinished, RunFinished, RunStarted } // do not reorder
 
+  /// <summary>
+  /// Is used by Rider Unity plugin by reflection
+  /// </summary>
   [Serializable]
   public class TestEvent
   {
