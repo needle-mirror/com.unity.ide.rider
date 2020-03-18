@@ -1,5 +1,10 @@
 # Code Editor Package for Rider
 
+## [2.0.2] - 2020-03-18
+
+fix bug in searching Rider path on MacOS
+
+
 ## [2.0.1] - 2020-03-05
 
 Speed improvements,
