@@ -116,9 +116,10 @@ namespace Packages.Rider.Editor.ProjectGeneration
     {
       SetupProjectSupportedExtensions();
 
-      if (HasFilesBeenModified(affectedFiles, reimportedFiles))
+      if (HasFilesBeenModified(affectedFiles, reimportedFiles) || RiderScriptEditorData.instance.hasChanges)
       {
         Sync();
+        RiderScriptEditorData.instance.hasChanges = false;
         return true;
       }
 
@@ -128,12 +129,12 @@ namespace Packages.Rider.Editor.ProjectGeneration
     bool HasFilesBeenModified(IEnumerable<string> affectedFiles, IEnumerable<string> reimportedFiles)
     {
       var files = reimportedFiles as string[] ?? reimportedFiles.ToArray();
-      return affectedFiles.Any(ShouldFileBePartOfSolution) || files.Any(ShouldSyncOnReimportedAsset) || files.Any(a => new FileInfo(a).Name == "csc.rsp");
+      return affectedFiles.Any(ShouldFileBePartOfSolution) || files.Any(ShouldSyncOnReimportedAsset);
     }
 
     static bool ShouldSyncOnReimportedAsset(string asset)
     {
-      return k_ReimportSyncExtensions.Contains(Path.GetExtension(asset));
+      return k_ReimportSyncExtensions.Contains(Path.GetExtension(asset)) || Path.GetFileName(asset) == "csc.rsp";
     }
 
     public void Sync()

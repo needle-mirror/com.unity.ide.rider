@@ -1,5 +1,12 @@
 # Code Editor Package for Rider
 
+## [2.0.3] - 2020-05-06
+
+fix RIDER-40568 Guarantee that sln and csproj files are present, when OpenProject is called
+fix RIDER-43851 Rider Unity Package: "The specified path is not of a legal form (empty)"
+Solve the issue that when both Unity3D and Rider are in fullscreen mode (different workspaces) in MacOS, open script will jump back to desktop and then to Rider.
+
+
 ## [2.0.2] - 2020-03-18
 
 fix bug in searching Rider path on MacOS

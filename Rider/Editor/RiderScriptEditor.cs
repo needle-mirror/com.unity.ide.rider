@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Packages.Rider.Editor.ProjectGeneration;
 using Packages.Rider.Editor.Util;
 using Unity.CodeEditor;
@@ -22,6 +23,7 @@ namespace Packages.Rider.Editor
     {
       try
       {
+        // todo: make ProjectGeneration lazy
         var projectGeneration = new ProjectGeneration.ProjectGeneration();
         var editor = new RiderScriptEditor(new Discovery(), projectGeneration);
         CodeEditor.Register(editor);
@@ -120,22 +122,33 @@ namespace Packages.Rider.Editor
 
     private static void InitProjectFilesWatcher()
     {
-      var watcher = new FileSystemWatcher();
-      watcher.Path = Directory.GetCurrentDirectory();
-      watcher.NotifyFilter = NotifyFilters.LastWrite; //Watch for changes in LastWrite times
-      watcher.Filter = "*.*";
-
-      // Add event handlers.
-      watcher.Changed += OnChanged;
-      watcher.Created += OnChanged;
-      watcher.Deleted += OnChanged;
-
-      watcher.EnableRaisingEvents = true; // Begin watching.
-      
-      AppDomain.CurrentDomain.DomainUnload += (EventHandler) ((_, __) =>
+      Task.Run(() =>
       {
-        watcher.Dispose();
-      });
+        var watcher = new FileSystemWatcher();
+        watcher.Path = Directory.GetCurrentDirectory();
+        watcher.NotifyFilter = NotifyFilters.LastWrite; //Watch for changes in LastWrite times
+        watcher.Filter = "*.*";
+
+        // Add event handlers.
+        watcher.Changed += OnChanged;
+        watcher.Created += OnChanged;
+        watcher.Deleted += OnChanged;
+        
+        watcher.EnableRaisingEvents = true;// Begin watching.
+
+        return watcher;
+      }).ContinueWith(task =>
+      {
+        try
+        {
+          var watcher = task.Result;
+          AppDomain.CurrentDomain.DomainUnload += (EventHandler) ((_, __) => { watcher.Dispose(); });
+        }
+        catch (Exception ex)
+        {
+          Debug.LogError(ex);
+        }
+      }, TaskScheduler.FromCurrentSynchronizationContext());
     }
 
     private static void OnChanged(object sender, FileSystemEventArgs e)
@@ -214,7 +227,8 @@ namespace Packages.Rider.Editor
       var extension = Path.GetExtension(path);
       if (string.IsNullOrEmpty(extension))
         return false;
-      return HandledExtensions.Contains(extension.TrimStart('.'));
+      // cs is a default extension, which should always be handled
+      return extension == ".cs" || HandledExtensions.Contains(extension.TrimStart('.'));
     }
 
     public void OnGUI()
@@ -270,11 +284,6 @@ namespace Packages.Rider.Editor
     public void SyncAll()
     {
       AssetDatabase.Refresh(); // refresh would automatically call sync if needed
-      if (RiderScriptEditorData.instance.hasChanges)
-      {
-        m_ProjectGeneration.Sync();
-        RiderScriptEditorData.instance.hasChanges = false;
-      }
     }
 
     public void Initialize(string editorInstallationPath) // is called each time ExternalEditor is changed
@@ -298,6 +307,7 @@ namespace Packages.Rider.Editor
 
       if (!IsUnityScript(path))
       {
+        m_ProjectGeneration.SyncIfNeeded(affectedFiles: new string[] { }, new string[] { });
         var fastOpenResult = EditorPluginInterop.OpenFileDllImplementation(path, line, column);
         if (fastOpenResult)
           return true;
@@ -327,7 +337,7 @@ namespace Packages.Rider.Editor
 
     private bool OpenOSXApp(string path, int line, int column)
     {
-      var solution = GetSolutionFile(path); // TODO: If solution file doesn't exist resync.
+      var solution = GetSolutionFile(path);
       solution = solution == "" ? "" : $"\"{solution}\"";
       var pathArguments = path == "" ? "" : $"-l {line} \"{path}\"";
       var process = new Process
@@ -335,7 +345,7 @@ namespace Packages.Rider.Editor
         StartInfo = new ProcessStartInfo
         {
           FileName = "open",
-          Arguments = $"-n \"{CodeEditor.CurrentEditorInstallation}\" --args {solution} {pathArguments}",
+          Arguments = $"-n -j \"{CodeEditor.CurrentEditorInstallation}\" --args {solution} {pathArguments}",
           CreateNoWindow = true,
           UseShellExecute = true,
         }
@@ -430,7 +440,7 @@ namespace Packages.Rider.Editor
 
     public CodeEditor.Installation[] Installations => m_Discoverability.PathCallback();
 
-    public void CreateSolutionIfDoesntExist()
+    private void CreateSolutionIfDoesntExist()
     {
       if (!m_ProjectGeneration.HasSolutionBeenGenerated())
       {
