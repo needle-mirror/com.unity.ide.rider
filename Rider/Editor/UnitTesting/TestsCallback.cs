@@ -38,7 +38,7 @@ namespace Packages.Rider.Editor.UnitTesting
           if (result.Test.Method == null) return;
           
           CallbackData.instance.events.Add(
-            new TestEvent(EventType.TestFinished, GetUniqueName(result.Test), result.Test.Method.TypeInfo.Assembly.GetName().Name, ExtractOutput(result), result.Duration, ParseTestStatus(result.TestStatus), result.Test.ParentFullName));
+            new TestEvent(EventType.TestFinished, GetUniqueName(result.Test), result.Test.Method.TypeInfo.Assembly.GetName().Name, ExtractOutput(result), (result.EndTime-result.StartTime).Milliseconds, ParseTestStatus(result.TestStatus), result.Test.ParentFullName));
           CallbackData.instance.RaiseChangedEvent();
         }
 

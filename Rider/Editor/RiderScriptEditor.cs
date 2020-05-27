@@ -28,14 +28,14 @@ namespace Packages.Rider.Editor
         var editor = new RiderScriptEditor(new Discovery(), projectGeneration);
         CodeEditor.Register(editor);
         var path = GetEditorRealPath(CurrentEditor);
-        
+
         if (IsRiderInstallation(path))
         {
           RiderPathLocator.RiderInfo[] installations = null;
-          
+
           if (!RiderScriptEditorData.instance.initializedOnce)
           {
-            installations = RiderPathLocator.GetAllRiderPaths().OrderBy(a=>a.BuildNumber).ToArray();
+            installations = RiderPathLocator.GetAllRiderPaths().OrderBy(a => a.BuildNumber).ToArray();
             // is likely outdated
             if (installations.Any() && installations.All(a => GetEditorRealPath(a.Path) != path))
             {
@@ -46,14 +46,14 @@ namespace Packages.Rider.Editor
                 {
                   var newEditor = toolboxInstallations.Last().Path;
                   CodeEditor.SetExternalScriptEditor(newEditor);
-                  path = newEditor;  
+                  path = newEditor;
                 }
                 else
                 {
                   var newEditor = installations.Last().Path;
                   CodeEditor.SetExternalScriptEditor(newEditor);
                   path = newEditor;
-                }  
+                }
               }
               else // is non toolbox - notify
               {
@@ -68,15 +68,16 @@ namespace Packages.Rider.Editor
 
           if (!FileSystemUtil.EditorPathExists(path)) // previously used rider was removed
           {
-            if (installations == null) 
-              installations = RiderPathLocator.GetAllRiderPaths().OrderBy(a=>a.BuildNumber).ToArray();
+            if (installations == null)
+              installations = RiderPathLocator.GetAllRiderPaths().OrderBy(a => a.BuildNumber).ToArray();
             if (installations.Any())
             {
               var newEditor = installations.Last().Path;
               CodeEditor.SetExternalScriptEditor(newEditor);
-              path = newEditor;  
+              path = newEditor;
             }
           }
+
           RiderScriptEditorData.instance.Init();
 
           editor.CreateSolutionIfDoesntExist();
@@ -85,7 +86,22 @@ namespace Packages.Rider.Editor
             editor.m_Initiliazer.Initialize(path);
           }
 
-          InitProjectFilesWatcher();
+          RiderFileSystemWatcher.InitWatcher(
+            Directory.GetCurrentDirectory(), "*.*", (sender, args) =>
+            {
+              var extension = Path.GetExtension(args.Name);
+              if (extension == ".sln" || extension == ".csproj")
+                RiderScriptEditorData.instance.hasChanges = true;
+            });
+
+          RiderFileSystemWatcher.InitWatcher(
+            Path.Combine(Directory.GetCurrentDirectory(), "Library"),
+            "EditorOnlyScriptingUserSettings.json",
+            (sender, args) => { RiderScriptEditorData.instance.hasChanges = true; });
+
+          RiderFileSystemWatcher.InitWatcher(
+            Path.Combine(Directory.GetCurrentDirectory(), "Packages"),
+            "manifest.json", (sender, args) => { RiderScriptEditorData.instance.hasChanges = true; });
         }
       }
       catch (Exception e)
@@ -118,44 +134,6 @@ namespace Packages.Rider.Editor
       {
         Debug.LogException(e);
       }
-    }
-
-    private static void InitProjectFilesWatcher()
-    {
-      Task.Run(() =>
-      {
-        var watcher = new FileSystemWatcher();
-        watcher.Path = Directory.GetCurrentDirectory();
-        watcher.NotifyFilter = NotifyFilters.LastWrite; //Watch for changes in LastWrite times
-        watcher.Filter = "*.*";
-
-        // Add event handlers.
-        watcher.Changed += OnChanged;
-        watcher.Created += OnChanged;
-        watcher.Deleted += OnChanged;
-        
-        watcher.EnableRaisingEvents = true;// Begin watching.
-
-        return watcher;
-      }).ContinueWith(task =>
-      {
-        try
-        {
-          var watcher = task.Result;
-          AppDomain.CurrentDomain.DomainUnload += (EventHandler) ((_, __) => { watcher.Dispose(); });
-        }
-        catch (Exception ex)
-        {
-          Debug.LogError(ex);
-        }
-      }, TaskScheduler.FromCurrentSynchronizationContext());
-    }
-
-    private static void OnChanged(object sender, FileSystemEventArgs e)
-    {
-      var extension = Path.GetExtension(e.FullPath);
-      if (extension == ".sln" || extension == ".csproj") 
-        RiderScriptEditorData.instance.hasChanges = true;
     }
 
     internal static string GetEditorRealPath(string path)
@@ -283,7 +261,8 @@ namespace Packages.Rider.Editor
 
     public void SyncAll()
     {
-      AssetDatabase.Refresh(); // refresh would automatically call sync if needed
+      AssetDatabase.Refresh();
+      m_ProjectGeneration.SyncIfNeeded(new string[] { }, new string[] { });
     }
 
     public void Initialize(string editorInstallationPath) // is called each time ExternalEditor is changed
