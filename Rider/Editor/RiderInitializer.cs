@@ -24,14 +24,17 @@ namespace Packages.Rider.Editor
         
         if (!dllFile.Exists)
           dllFile = new FileInfo(Path.Combine(baseDir, $"{EditorPluginInterop.EditorPluginAssemblyNameFallback}.dll"));
+        
+        // use this for debugging
+        // dllFile = new FileInfo(@"C:\Work\resharper-unity\unity\build\EditorPluginNet46\bin\Debug\net461\JetBrains.Rider.Unity.Editor.Plugin.Net46.dll");
 
         if (dllFile.Exists)
         {
           var bytes = File.ReadAllBytes(dllFile.FullName); 
           assembly = AppDomain.CurrentDomain.Load(bytes); // doesn't lock assembly on disk
-          // assembly = AppDomain.CurrentDomain.Load(AssemblyName.GetAssemblyName(dllFile.FullName)); // use this for external source debug
+          // assembly = AppDomain.CurrentDomain.Load(System.Reflection.AssemblyName.GetAssemblyName(dllFile.FullName)); // use this for debugging
           if (PluginSettings.SelectedLoggingLevel >= LoggingLevel.TRACE)
-            Debug.Log($"Rider EditorPluging loaded from {dllFile.FullName}");
+            Debug.Log($"Rider EditorPlugin loaded from {dllFile.FullName}");
           
           EditorPluginInterop.InitEntryPoint(assembly);
         }

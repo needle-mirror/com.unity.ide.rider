@@ -188,11 +188,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
     bool IsSupportedExtension(string extension)
     {
       extension = extension.TrimStart('.');
-      if (k_BuiltinSupportedExtensions.ContainsKey(extension))
-        return true;
-      if (m_ProjectSupportedExtensions.Contains(extension))
-        return true;
-      return false;
+      return k_BuiltinSupportedExtensions.ContainsKey(extension) || m_ProjectSupportedExtensions.Contains(extension);
     }
 
     static ScriptingLanguage ScriptingLanguageFor(Assembly island)
@@ -574,7 +570,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
         MSBuildNamespaceUri,
         assembly.name,
         assembly.outputPath,
-        m_AssemblyNameProvider.ProjectGenerationRootNamespace,
+        GetRootNamespace(assembly),
         k_TargetFrameworkVersion,
         GenerateLangVersion(otherResponseFilesData["langversion"]),
         k_BaseDirectory,
@@ -582,12 +578,16 @@ namespace Packages.Rider.Editor.ProjectGeneration
         GenerateNoWarn(otherResponseFilesData["nowarn"].Distinct().ToArray()),
         GenerateAnalyserItemGroup(
           otherResponseFilesData["analyzer"].Concat(otherResponseFilesData["a"])
-            .SelectMany(x => x.Split(';'))
-            .Concat(roslynAnalyzerDllPaths)
-            .Distinct()
-            .ToArray()),
-        GenerateAnalyserAdditionalFiles(otherResponseFilesData["additionalfile"].SelectMany(x => x.Split(';')).Distinct().ToArray()),
+                                                  .SelectMany(x=>x.Split(';'))
+                                                  .Concat(roslynAnalyzerDllPaths)
+                                                  .Distinct()
+                                                  .ToArray()),
+        GenerateAnalyserAdditionalFiles(otherResponseFilesData["additionalfile"].SelectMany(x=>x.Split(';')).Distinct().ToArray()),
+        #if UNITY_2020_2_OR_NEWER
+        GenerateAnalyserRuleSet(otherResponseFilesData["ruleset"].Append(assembly.compilerOptions.RoslynAnalyzerRulesetPath).Distinct().ToArray()),
+        #else
         GenerateAnalyserRuleSet(otherResponseFilesData["ruleset"].Distinct().ToArray()),
+        #endif
         GenerateWarningLevel(otherResponseFilesData["warn"].Concat(otherResponseFilesData["w"]).Distinct()),
         GenerateWarningAsError(otherResponseFilesData["warnaserror"]),
         GenerateDocumentationFile(otherResponseFilesData["doc"])
@@ -943,5 +943,14 @@ namespace Packages.Rider.Editor.ProjectGeneration
         m_ProjectName,
         m_AssemblyNameProvider.GetProjectName(assembly.outputPath, assembly.name));
     }
-  }
+
+    static string GetRootNamespace(Assembly assembly)
+    {
+#if UNITY_2020_2_OR_NEWER
+      return assembly.rootNamespace;
+#else
+      return EditorSettings.projectGenerationRootNamespace;
+#endif
+    }
+}
 }

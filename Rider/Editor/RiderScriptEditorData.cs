@@ -1,4 +1,5 @@
 using System;
+using Packages.Rider.Editor.Util;
 using UnityEditor;
 using UnityEngine;
 
@@ -9,7 +10,7 @@ namespace Packages.Rider.Editor
     [SerializeField] internal bool hasChanges = true; // sln/csproj files were changed 
     [SerializeField] internal bool shouldLoadEditorPlugin;
     [SerializeField] internal bool initializedOnce;
-    [SerializeField] internal Version editorBuildNumber;
+    [SerializeField] internal SerializableVersion editorBuildNumber;
     [SerializeField] internal RiderPathLocator.ProductInfo productInfo;
 
     public void Init()
@@ -22,12 +23,13 @@ namespace Packages.Rider.Editor
 
     public void Invalidate(string editorInstallationPath)
     {
-      editorBuildNumber = RiderPathLocator.GetBuildNumber(editorInstallationPath);
+      var riderBuildNumber = RiderPathLocator.GetBuildNumber(editorInstallationPath);
+      editorBuildNumber = riderBuildNumber.ToSerializableVersion();
       productInfo = RiderPathLocator.GetBuildVersion(editorInstallationPath);
-      if (editorBuildNumber == null)
+      if (riderBuildNumber == null)
         shouldLoadEditorPlugin = false;
 
-      shouldLoadEditorPlugin = editorBuildNumber >= new Version("191.7141.156");
+      shouldLoadEditorPlugin = riderBuildNumber >= new Version("191.7141.156");
     }
   }
 }

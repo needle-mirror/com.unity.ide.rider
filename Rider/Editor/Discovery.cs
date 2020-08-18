@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using JetBrains.Annotations;
 using Microsoft.Win32;
+using Packages.Rider.Editor.Util;
 using Unity.CodeEditor;
 using UnityEngine;
 
@@ -515,7 +516,7 @@ namespace Packages.Rider.Editor
         if (path == RiderScriptEditor.CurrentEditor)
         {
           RiderScriptEditorData.instance.Init();
-          BuildNumber = RiderScriptEditorData.instance.editorBuildNumber;
+          BuildNumber = RiderScriptEditorData.instance.editorBuildNumber.ToVersion();
           ProductInfo = RiderScriptEditorData.instance.productInfo;
         }
         else
