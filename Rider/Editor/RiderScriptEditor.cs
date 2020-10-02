@@ -2,12 +2,11 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Packages.Rider.Editor.ProjectGeneration;
 using Packages.Rider.Editor.Util;
 using Unity.CodeEditor;
 using UnityEditor;
-using UnityEditor.Build;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
@@ -17,7 +16,7 @@ namespace Packages.Rider.Editor
   internal class RiderScriptEditor : IExternalCodeEditor
   {
     IDiscovery m_Discoverability;
-    IGenerator m_ProjectGeneration;
+    static IGenerator m_ProjectGeneration;
     RiderInitializer m_Initiliazer = new RiderInitializer();
 
     static RiderScriptEditor()
@@ -59,7 +58,7 @@ namespace Packages.Rider.Editor
               else // is non toolbox - notify
               {
                 var newEditorName = installations.Last().Presentation;
-                Debug.LogWarning($"Consider updating External Editor in Unity to Rider {newEditorName}.");
+                Debug.LogWarning($"Consider updating External Editor in Unity to {newEditorName}.");
               }
             }
 
@@ -94,11 +93,6 @@ namespace Packages.Rider.Editor
               if (extension == ".sln" || extension == ".csproj")
                 RiderScriptEditorData.instance.hasChanges = true;
             });
-
-          RiderFileSystemWatcher.InitWatcher(
-            Path.Combine(Directory.GetCurrentDirectory(), "Library"),
-            "EditorOnlyScriptingUserSettings.json",
-            (sender, args) => { RiderScriptEditorData.instance.hasChanges = true; });
 
           RiderFileSystemWatcher.InitWatcher(
             Path.Combine(Directory.GetCurrentDirectory(), "Packages"),
@@ -272,6 +266,12 @@ namespace Packages.Rider.Editor
     {
       AssetDatabase.Refresh();
       m_ProjectGeneration.SyncIfNeeded(new string[] { }, new string[] { });
+    }
+    
+    [UsedImplicitly]
+    public static void SyncSolution() // generate-the-sln-file-via-script-or-command-line
+    {
+      m_ProjectGeneration.Sync();
     }
 
     public void Initialize(string editorInstallationPath) // is called each time ExternalEditor is changed

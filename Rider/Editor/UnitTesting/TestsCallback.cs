@@ -29,7 +29,7 @@ namespace Packages.Rider.Editor.UnitTesting
           if (result.Method == null) return;
           
           CallbackData.instance.events.Add(
-            new TestEvent(EventType.TestStarted, GetUniqueName(result), result.Method.TypeInfo.Assembly.GetName().Name, "", 0, NUnit.Framework.Interfaces.TestStatus.Passed, result.ParentFullName));
+           new TestEvent(EventType.TestStarted, GenerateId(result), result.Method.TypeInfo.Assembly.GetName().Name, "", 0, NUnit.Framework.Interfaces.TestStatus.Passed, GenerateId(result.Parent)));
           CallbackData.instance.RaiseChangedEvent();
         }
 
@@ -38,7 +38,7 @@ namespace Packages.Rider.Editor.UnitTesting
           if (result.Test.Method == null) return;
           
           CallbackData.instance.events.Add(
-            new TestEvent(EventType.TestFinished, GetUniqueName(result.Test), result.Test.Method.TypeInfo.Assembly.GetName().Name, ExtractOutput(result), (result.EndTime-result.StartTime).Milliseconds, ParseTestStatus(result.TestStatus), result.Test.ParentFullName));
+            new TestEvent(EventType.TestFinished, GenerateId(result.Test), result.Test.Method.TypeInfo.Assembly.GetName().Name, ExtractOutput(result), (result.EndTime-result.StartTime).Milliseconds, ParseTestStatus(result.TestStatus), GenerateId(result.Test.Parent)));
           CallbackData.instance.RaiseChangedEvent();
         }
 
@@ -51,11 +51,17 @@ namespace Packages.Rider.Editor.UnitTesting
           CallbackData.instance.RaiseChangedEvent();
         }
 
-        // todo: reimplement JetBrains.Rider.Unity.Editor.AfterUnity56.UnitTesting.TestEventsSender.GetUniqueName
-        private static string GetUniqueName(ITestAdaptor test)
+        // see explanation in https://jetbrains.team/p/net/code/dotnet-libs/files/f04cde7d1dd70ee13bf5532e30f929b9b5ed08a4/ReSharperTestRunner/src/Adapters/TestRunner.Adapters.NUnit3/RemoteTaskDepot.cs?tab=source&line=129
+        private static string GenerateId(ITestAdaptor node)
         {
-          string str = test.FullName;
-          return str;
+          // ES: Parameterized tests defined in a parametrized test fixture, though 
+          // constructed for a particular test fixture with the given parameter, have identical fullname that does
+          // not include parameters of parent testfixture (name of the without parameters is used instead).
+          // This leads to 'Test with {id} id is already running' message.
+          if (node.TypeInfo == null) 
+            return $"{node.Parent.FullName}.{node.Name}";
+
+          return node.FullName;
         }
 
         private static NUnit.Framework.Interfaces.TestStatus ParseTestStatus(TestStatus testStatus)

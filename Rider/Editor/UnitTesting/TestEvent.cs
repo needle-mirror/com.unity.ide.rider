@@ -1,3 +1,4 @@
+#if TEST_FRAMEWORK
 using System;
 using NUnit.Framework.Interfaces;
 
@@ -35,3 +36,4 @@ namespace Packages.Rider.Editor.UnitTesting
     }
   }
 }
+#endif

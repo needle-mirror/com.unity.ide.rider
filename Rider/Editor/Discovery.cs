@@ -261,7 +261,7 @@ namespace Packages.Rider.Editor
 
     internal static bool GetIsToolbox(string path)
     {
-      return path.StartsWith(GetToolboxBaseDir());
+      return Path.GetFullPath(path).StartsWith(Path.GetFullPath(GetToolboxBaseDir()));
     }
 
     private static string GetRelativePathToBuildTxt()

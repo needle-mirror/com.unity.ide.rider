@@ -32,54 +32,37 @@ namespace Packages.Rider.Editor.ProjectGeneration
 
     public IEnumerable<Assembly> GetAssemblies(Func<string, bool> shouldFileBePartOfSolution)
     {
-      foreach (var assembly in CompilationPipeline.GetAssemblies())
-      {
-        if (assembly.sourceFiles.Any(shouldFileBePartOfSolution))
-        {
-          var options = new ScriptCompilerOptions()
-          {
-            ResponseFiles = assembly.compilerOptions.ResponseFiles,
-            AllowUnsafeCode = assembly.compilerOptions.AllowUnsafeCode,
-            ApiCompatibilityLevel = assembly.compilerOptions.ApiCompatibilityLevel
-          };
-
-          yield return new Assembly(assembly.name, "Temp\\Bin\\Debug\\", 
-            assembly.sourceFiles, 
-            new[] { "DEBUG", "TRACE" }.Concat(assembly.defines).Concat(EditorUserBuildSettings.activeScriptCompilationDefines).ToArray(), 
-            assembly.assemblyReferences, 
-            assembly.compiledAssemblyReferences, 
-            assembly.flags,
-#if UNITY_2020_2_OR_NEWER
-            options,
-            assembly.rootNamespace);
-#else
-            options);
-#endif
-        }
-      }
+      var assemblies = GetAssembliesByType(AssembliesType.Editor, shouldFileBePartOfSolution, "Temp\\Bin\\Debug\\");
 
       if (ProjectGenerationFlag.HasFlag(ProjectGenerationFlag.PlayerAssemblies))
       {
-        foreach (var assembly in CompilationPipeline.GetAssemblies(AssembliesType.Player).Where(assembly => assembly.sourceFiles.Any(shouldFileBePartOfSolution)))
-        {
-          var options = new ScriptCompilerOptions()
-          {
-            ResponseFiles = assembly.compilerOptions.ResponseFiles,
-            AllowUnsafeCode = assembly.compilerOptions.AllowUnsafeCode,
-            ApiCompatibilityLevel = assembly.compilerOptions.ApiCompatibilityLevel
-          };
+        var playerAssemblies = GetAssembliesByType(AssembliesType.Player, shouldFileBePartOfSolution, "Temp\\Bin\\Debug\\Player\\");
+        assemblies = assemblies.Concat(playerAssemblies);
+      }
 
-          yield return new Assembly(assembly.name, "Temp\\Bin\\Debug\\Player\\", assembly.sourceFiles, 
-            new[] { "DEBUG", "TRACE" }.Concat(assembly.defines).ToArray(), 
-            assembly.assemblyReferences, 
-            assembly.compiledAssemblyReferences, 
-            assembly.flags,
+      return assemblies;
+    }
+
+    private IEnumerable<Assembly> GetAssembliesByType(AssembliesType type, Func<string, bool> shouldFileBePartOfSolution, string outputPath)
+    {
+      foreach (var assembly in CompilationPipeline.GetAssemblies(type))
+      {
+        var options = new ScriptCompilerOptions()
+        {
+          ResponseFiles = assembly.compilerOptions.ResponseFiles,
+          AllowUnsafeCode = assembly.compilerOptions.AllowUnsafeCode,
+          ApiCompatibilityLevel = assembly.compilerOptions.ApiCompatibilityLevel
+        };
+
+        if (assembly.sourceFiles.Any(shouldFileBePartOfSolution))
+        {
+          yield return new Assembly(assembly.name
+            , outputPath, assembly.sourceFiles, assembly.defines
+            , assembly.assemblyReferences, assembly.compiledAssemblyReferences, assembly.flags, options
 #if UNITY_2020_2_OR_NEWER
-            options,
-            assembly.rootNamespace);
-#else
-            options);
+            , assembly.rootNamespace
 #endif
+          );
         }
       }
     }

@@ -21,16 +21,6 @@ namespace Packages.Rider.Editor
       private set { EditorPrefs.SetBool("Rider_LogEventsCollectorEnabled", value); }
     }
 
-
-    private static GUIStyle ourVersionInfoStyle = new GUIStyle()
-    {
-      normal = new GUIStyleState()
-      {
-        textColor = new Color(0, 0, 0, .6f),
-      }, 
-      margin = new RectOffset(4, 4, 4, 4),
-    };
-
     /// <summary>
     /// Preferences menu layout
     /// </summary>
@@ -97,7 +87,10 @@ namespace Packages.Rider.Editor
           if (assembly != null)
           {
             var version = assembly.GetName().Version;
-            GUILayout.Label("Plugin version: " + version, ourVersionInfoStyle);
+            GUILayout.Label("Plugin version: " + version, new GUIStyle(GUI.skin.label)
+            {
+              margin = new RectOffset(4, 4, 4, 4),
+            });
           }
 
           GUILayout.EndHorizontal();

@@ -1,8 +1,6 @@
 using JetBrains.Annotations;
 using Packages.Rider.Editor;
-using Packages.Rider.Editor.Util;
 using Unity.CodeEditor;
-using UnityEditor;
 
 // ReSharper disable once CheckNamespace 
 namespace JetBrains.Rider.Unity.Editor

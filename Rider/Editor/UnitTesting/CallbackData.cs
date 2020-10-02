@@ -1,3 +1,4 @@
+#if TEST_FRAMEWORK
 using System;
 using System.Collections.Generic;
 using JetBrains.Annotations;
@@ -32,3 +33,4 @@ namespace Packages.Rider.Editor.UnitTesting
     }
   }
 }
+#endif

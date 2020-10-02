@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Packages.Rider.Editor.Util;
 using UnityEditor;
 using UnityEngine;
@@ -12,6 +13,7 @@ namespace Packages.Rider.Editor
     [SerializeField] internal bool initializedOnce;
     [SerializeField] internal SerializableVersion editorBuildNumber;
     [SerializeField] internal RiderPathLocator.ProductInfo productInfo;
+    [SerializeField] internal string[] activeScriptCompilationDefines;
 
     public void Init()
     {
@@ -19,6 +21,16 @@ namespace Packages.Rider.Editor
       {
         Invalidate(RiderScriptEditor.CurrentEditor);
       }
+    }
+
+    public void InvalidateSavedCompilationDefines()
+    {
+      activeScriptCompilationDefines = EditorUserBuildSettings.activeScriptCompilationDefines;
+    }
+    
+    public bool HasChangesInCompilationDefines()
+    {
+      return !EditorUserBuildSettings.activeScriptCompilationDefines.SequenceEqual(activeScriptCompilationDefines);
     }
 
     public void Invalidate(string editorInstallationPath)

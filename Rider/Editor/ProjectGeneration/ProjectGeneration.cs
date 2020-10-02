@@ -116,10 +116,11 @@ namespace Packages.Rider.Editor.ProjectGeneration
     {
       SetupProjectSupportedExtensions();
 
-      if (HasFilesBeenModified(affectedFiles, reimportedFiles) || RiderScriptEditorData.instance.hasChanges)
+      if (HasFilesBeenModified(affectedFiles, reimportedFiles) || RiderScriptEditorData.instance.hasChanges || RiderScriptEditorData.instance.HasChangesInCompilationDefines())
       {
         Sync();
         RiderScriptEditorData.instance.hasChanges = false;
+        RiderScriptEditorData.instance.InvalidateSavedCompilationDefines();
         return true;
       }
 
@@ -226,8 +227,8 @@ namespace Packages.Rider.Editor.ProjectGeneration
       var monoIslands = assemblies.ToList();
 
       SyncSolution(monoIslands, types);
-      var allProjectIslands = RelevantIslandsForMode(monoIslands).ToList();
-      foreach (Assembly assembly in allProjectIslands)
+      var allProjectIslands = GetRelevantIslands(monoIslands);
+      foreach (var assembly in allProjectIslands)
       {
         var responseFileData = ParseResponseFileData(assembly);
         SyncProject(assembly, allAssetProjectParts, responseFileData, types, GetAllRoslynAnalyzerPaths().ToArray());
@@ -765,7 +766,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
       var fileversion = "11.00";
       var vsversion = "2010";
 
-      var relevantIslands = RelevantIslandsForMode(islands);
+      var relevantIslands = GetRelevantIslands(islands);
       string projectEntries = GetProjectEntries(relevantIslands);
       string projectConfigurations = string.Join(Environment.NewLine,
         relevantIslands.Select(i => GetProjectActiveConfigurations(ProjectGuid(i))).ToArray());
@@ -862,10 +863,9 @@ namespace Packages.Rider.Editor.ProjectGeneration
       return $",{string.Join(",", codes)}";
     }
 
-    static IEnumerable<Assembly> RelevantIslandsForMode(IEnumerable<Assembly> islands)
+    private static Assembly[] GetRelevantIslands(IEnumerable<Assembly> islands)
     {
-      IEnumerable<Assembly> relevantIslands = islands.Where(i => ScriptingLanguage.CSharp == ScriptingLanguageFor(i));
-      return relevantIslands;
+      return islands.Where(i => ScriptingLanguage.CSharp == ScriptingLanguageFor(i)).ToArray();
     }
 
     /// <summary>

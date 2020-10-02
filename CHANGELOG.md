@@ -1,5 +1,13 @@
 # Code Editor Package for Rider
 
+## [3.0.1] - 2020-10-02
+
+RIDER-46658 Rider does not run PlayMode tests when ValueSource is combined with parameterized TestFixture
+
+RIDER-49947 Invoking `PlayerSettings.SetScriptingDefineSymbolsForGroup()` does not update definitions in Rider.
+
+Add static entrypoint `Packages.Rider.Editor.RiderScriptEditor.SyncSolution` to allow generating solution from commandline.
+
 ## [2.0.7] - 2020-08-18
 
 Improve performance
