@@ -87,13 +87,17 @@ namespace Packages.Rider.Editor
           }
 
           RiderFileSystemWatcher.InitWatcher(
-            Directory.GetCurrentDirectory(), "*.*", (sender, args) =>
+            Directory.GetCurrentDirectory(), "*.csproj", (sender, args) =>
             {
-              var extension = Path.GetExtension(args.Name);
-              if (extension == ".sln" || extension == ".csproj")
-                RiderScriptEditorData.instance.hasChanges = true;
+              RiderScriptEditorData.instance.hasChanges = true;
             });
 
+          RiderFileSystemWatcher.InitWatcher(
+            Directory.GetCurrentDirectory(), "*.sln", (sender, args) =>
+            {
+              RiderScriptEditorData.instance.hasChanges = true;
+            });
+          
           RiderFileSystemWatcher.InitWatcher(
             Path.Combine(Directory.GetCurrentDirectory(), "Packages"),
             "manifest.json", (sender, args) => { RiderScriptEditorData.instance.hasChanges = true; });
@@ -276,8 +280,19 @@ namespace Packages.Rider.Editor
 
     public void Initialize(string editorInstallationPath) // is called each time ExternalEditor is changed
     {
+      var oldBuildNumber = RiderScriptEditorData.instance.editorBuildNumber;
+      
       RiderScriptEditorData.instance.Invalidate(editorInstallationPath);
-      m_ProjectGeneration.Sync(); // regenerate csproj and sln for new editor
+      if (oldBuildNumber.ToVersion() != RiderScriptEditorData.instance.editorBuildNumber.ToVersion()) // in Unity 2019.3 any change in preference causes `Initialize` call
+      {
+        m_ProjectGeneration.Sync(); // regenerate csproj and sln for new editor
+#if UNITY_2019_3_OR_NEWER
+        EditorUtility.RequestScriptReload(); // EditorPlugin would get loaded
+#else 
+        UnityEditorInternal.InternalEditorUtility.RequestScriptReload();
+#endif
+        
+      }
     }
 
     public bool OpenProject(string path, int line, int column)

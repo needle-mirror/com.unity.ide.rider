@@ -1,5 +1,13 @@
 # Code Editor Package for Rider
 
+## [3.0.2] - 2020-10-27
+
+Speedup ProjectGeneration
+Fix RIDER-51958. Callbacks OnGeneratedCSProjectFiles would not work, but show a Warning instead.
+Remove release configuration
+Call RequestScriptReload, when External Editor is changed in Unity.
+
+
 ## [3.0.1] - 2020-10-02
 
 RIDER-46658 Rider does not run PlayMode tests when ValueSource is combined with parameterized TestFixture

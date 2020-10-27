@@ -2,21 +2,21 @@
   "name": "com.unity.ide.rider",
   "displayName": "JetBrains Rider Editor",
   "description": "The JetBrains Rider Editor package provides an integration for using the JetBrains Rider IDE as a code editor for Unity. It adds support for generating .csproj files for code completion and auto-discovery of installations.",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "unity": "2019.2",
   "unityRelease": "6f1",
   "dependencies": {
     "com.unity.test-framework": "1.1.1"
   },
   "relatedPackages": {
-    "com.unity.ide.rider.tests": "3.0.1"
+    "com.unity.ide.rider.tests": "3.0.2"
   },
   "upmCi": {
-    "footprint": "1dbfd852f31db4708faf0426e4b55ac805bc83f1"
+    "footprint": "e9d11fcf7750fdb81137504fbe9fb7b24d05a6ec"
   },
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/com.unity.ide.rider.git",
     "type": "git",
-    "revision": "de1320a54fe4e3db1f32ad3e383c066ee1ba0bdc"
+    "revision": "ee6552b010e6a4b74db9d1929e2e4f698cd7ecd3"
   }
 }

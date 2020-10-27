@@ -11,13 +11,10 @@ namespace Packages.Rider.Editor.ProjectGeneration
       return ComputeGuidHashFor(projectName + "salt");
     }
 
-    public static string GuidForSolution(string projectName, string sourceFileExtension)
+    public static string GuidForSolution()
     {
-      if (sourceFileExtension.ToLower() == "cs")
-        // GUID for a C# class library: http://www.codeproject.com/Reference/720512/List-of-Visual-Studio-Project-Type-GUIDs
-        return "FAE04EC0-301F-11D3-BF4B-00C04F79EFBC";
-
-      return ComputeGuidHashFor(projectName);
+      // GUID for a C# class library: http://www.codeproject.com/Reference/720512/List-of-Visual-Studio-Project-Type-GUIDs
+      return "FAE04EC0-301F-11D3-BF4B-00C04F79EFBC";
     }
 
     static string ComputeGuidHashFor(string input)

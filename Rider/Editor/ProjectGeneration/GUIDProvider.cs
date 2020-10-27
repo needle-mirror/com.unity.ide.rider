@@ -5,10 +5,5 @@ namespace Packages.Rider.Editor.ProjectGeneration {
     {
       return SolutionGuidGenerator.GuidForProject(projectName + assemblyName);
     }
-
-    public string SolutionGuid(string projectName, string extension)
-    {
-      return SolutionGuidGenerator.GuidForSolution(projectName, extension); // GetExtensionOfSourceFiles(assembly.sourceFiles)
-    }
   }
 }

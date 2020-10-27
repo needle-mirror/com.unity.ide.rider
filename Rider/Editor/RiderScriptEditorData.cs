@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Packages.Rider.Editor.Util;
+using Rider.Editor.Util;
 using UnityEditor;
 using UnityEngine;
 
@@ -42,6 +43,12 @@ namespace Packages.Rider.Editor
         shouldLoadEditorPlugin = false;
 
       shouldLoadEditorPlugin = riderBuildNumber >= new Version("191.7141.156");
+
+      if (RiderPathUtil.IsRiderDevEditor(editorInstallationPath))
+      {
+        shouldLoadEditorPlugin = true;
+        editorBuildNumber = new SerializableVersion(new Version("999.999.999.999"));
+      }
     }
   }
 }
