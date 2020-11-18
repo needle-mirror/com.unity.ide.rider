@@ -31,6 +31,9 @@ namespace Packages.Rider.Editor
     
     public bool HasChangesInCompilationDefines()
     {
+      if (activeScriptCompilationDefines == null)
+        return false;
+      
       return !EditorUserBuildSettings.activeScriptCompilationDefines.SequenceEqual(activeScriptCompilationDefines);
     }
 

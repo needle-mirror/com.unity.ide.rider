@@ -277,6 +277,13 @@ namespace Packages.Rider.Editor
     {
       m_ProjectGeneration.Sync();
     }
+    
+    [UsedImplicitly]
+    public static void SyncSolutionAndOpenExternalEditor()
+    {
+      m_ProjectGeneration.Sync();
+      CodeEditor.CurrentEditor.OpenProject();
+    }
 
     public void Initialize(string editorInstallationPath) // is called each time ExternalEditor is changed
     {
@@ -419,10 +426,16 @@ namespace Packages.Rider.Editor
       if (IsAssetImportWorkerProcess())
         return false;
       
-      if (string.IsNullOrEmpty(path))
-      {
+#if UNITY_2020_2_OR_NEWER
+      if (UnityEditor.MPE.ProcessService.level == UnityEditor.MPE.ProcessLevel.Slave)
         return false;
-      }
+#elif UNITY_2020_1_OR_NEWER
+      if (Unity.MPE.ProcessService.level == Unity.MPE.ProcessLevel.UMP_SLAVE)
+        return false;
+#endif
+      
+      if (string.IsNullOrEmpty(path))
+        return false;
 
       var fileInfo = new FileInfo(path);
       var filename = fileInfo.Name.ToLowerInvariant();

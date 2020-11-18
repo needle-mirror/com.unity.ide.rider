@@ -1,58 +1,57 @@
 # Code Editor Package for Rider
 
-## [3.0.2] - 2020-10-27
+## [3.0.3] - 2020-11-18
 
-Speedup ProjectGeneration
-Fix RIDER-51958. Callbacks OnGeneratedCSProjectFiles would not work, but show a Warning instead.
-Remove release configuration
-Call RequestScriptReload, when External Editor is changed in Unity.
+Update License
+Avoid connecting Rider from secondary UnityEditor instances
+Fix RIDER-53082 - Generate csproj without cs files, when there are any assets inside
+
+
+## [3.0.2] - 2020-10-27
+- Speedup ProjectGeneration
+- Fix RIDER-51958. Callbacks OnGeneratedCSProjectFiles would not work, but show a Warning instead.
+- Remove release configuration
+- Call RequestScriptReload, when External Editor is changed in Unity.
 
 
 ## [3.0.1] - 2020-10-02
 
-RIDER-46658 Rider does not run PlayMode tests when ValueSource is combined with parameterized TestFixture
-
-RIDER-49947 Invoking `PlayerSettings.SetScriptingDefineSymbolsForGroup()` does not update definitions in Rider.
-
-Add static entrypoint `Packages.Rider.Editor.RiderScriptEditor.SyncSolution` to allow generating solution from commandline.
+- RIDER-46658 Rider does not run PlayMode tests when ValueSource is combined with parameterized TestFixture
+- RIDER-49947 Invoking `PlayerSettings.SetScriptingDefineSymbolsForGroup()` does not update definitions in Rider.
+- Add static entrypoint `Packages.Rider.Editor.RiderScriptEditor.SyncSolution` to allow generating solution from commandline.
 
 ## [2.0.7] - 2020-08-18
-
-Improve performance
-Add support for asmdef Root Namespace in .csproj generation
-ProjectGeneration for custom roslyn analysers https://docs.unity3d.com/2020.2/Documentation/Manual/roslyn-analyzers.html
-Switch target platform in Unity would regenerate csproj files (https://github.com/JetBrains/resharper-unity/issues/1740)
+- Improve performance
+- Add support for asmdef Root Namespace in .csproj generation
+- ProjectGeneration for custom roslyn analysers https://docs.unity3d.com/2020.2/Documentation/Manual/roslyn-analyzers.html
+- Switch target platform in Unity would regenerate csproj files (https://github.com/JetBrains/resharper-unity/issues/1740)
 
 
 ## [2.0.6] - 2020-08-10
-
-Improve performance
-Add support for asmdef Root Namespace in .csproj generation
-ProjectGeneration for custom roslyn analysers https://docs.unity3d.com/2020.2/Documentation/Manual/roslyn-analyzers.html
-Switch target platform in Unity would regenerate csproj files (https://github.com/JetBrains/resharper-unity/issues/1740)
+- Improve performance
+- Add support for asmdef Root Namespace in .csproj generation
+- ProjectGeneration for custom roslyn analysers https://docs.unity3d.com/2020.2/Documentation/Manual/roslyn-analyzers.html
+- Switch target platform in Unity would regenerate csproj files (https://github.com/JetBrains/resharper-unity/issues/1740)
 
 
 ## [2.0.5] - 2020-05-27
-
-Fix Regression in 2.0.3: In Unity 2019.2.9 on Mac, changing csproj and calling AssetDatabase.Refresh is not regenerating csproj.
-Regenerate projects on changes in manifest.json and Project Settings (EditorOnlyScriptingUserSettings.json) (#51)
-Fix: Assembly references to package assemblies break IDE projects.
-Fix: Reporting test duration.
+- Fix Regression in 2.0.3: In Unity 2019.2.9 on Mac, changing csproj and calling AssetDatabase.Refresh is not regenerating csproj.
+- Regenerate projects on changes in manifest.json and Project Settings (EditorOnlyScriptingUserSettings.json) (#51)
+- Fix: Assembly references to package assemblies break IDE projects.
+- Fix: Reporting test duration.
 
 
 ## [2.0.2] - 2020-03-18
-
-fix bug in searching Rider path on MacOS
+- fix bug in searching Rider path on MacOS
 
 
 ## [2.0.1] - 2020-03-05
-
-Speed improvements,
-ProjectTypeGuids for unity-generated project
-Improve UI for Project Generation settings
-Changes in csc.rsp would cause project-generation
-Remove NoWarn 0169 from generated csproj
-Support custom JetBrains Toolbox installation location
+- Speed improvements,
+- ProjectTypeGuids for unity-generated project
+- Improve UI for Project Generation settings
+- Changes in csc.rsp would cause project-generation
+- Remove NoWarn 0169 from generated csproj
+- Support custom JetBrains Toolbox installation location
 
 ## [1.2.1] - 2019-12-09
 
