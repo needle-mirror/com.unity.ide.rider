@@ -488,7 +488,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
         assembly.OutputPath,
         assembly.RootNamespace,
         k_TargetFrameworkVersion,
-        GenerateLangVersion(otherResponseFilesData["langversion"]),
+        GenerateLangVersion(otherResponseFilesData["langversion"], assembly),
         k_BaseDirectory,
         assembly.CompilerOptions.AllowUnsafeCode | responseFilesData.Any(x => x.Unsafe),
         GenerateNoWarn(otherResponseFilesData["nowarn"].Distinct().ToArray()),
@@ -506,7 +506,8 @@ namespace Packages.Rider.Editor.ProjectGeneration
         #endif
         GenerateWarningLevel(otherResponseFilesData["warn"].Concat(otherResponseFilesData["w"]).Distinct()),
         GenerateWarningAsError(otherResponseFilesData["warnaserror"]),
-        GenerateDocumentationFile(otherResponseFilesData["doc"].ToArray())
+        GenerateDocumentationFile(otherResponseFilesData["doc"].ToArray()),
+        GenerateNullable(otherResponseFilesData["nullable"])
       };
 
       try
@@ -519,6 +520,26 @@ namespace Packages.Rider.Editor.ProjectGeneration
           "Failed creating c# project because the c# project header did not have the correct amount of arguments, which is " +
           arguments.Length);
       }
+    }
+
+    private string GenerateNullable(IEnumerable<string> enumerable)
+    {
+      if (!enumerable.Any())
+        return string.Empty;
+
+      var returnValue = string.Empty;
+      var val = string.Empty;
+
+      foreach (var s in enumerable)
+      {
+        if (s == "+") val = "enable";
+        else if (s == "-") val = "disable";
+        else val = s;
+      }
+
+      returnValue += $@"    <Nullable>{val}</Nullable>";
+
+      return $"{Environment.NewLine}{returnValue}";
     }
 
     private static string GenerateDocumentationFile(string[] paths)
@@ -636,7 +657,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
         @"    <ErrorReport>prompt</ErrorReport>",
         @"    <WarningLevel>{18}</WarningLevel>",
         @"    <NoWarn>{14}</NoWarn>",
-        @"    <AllowUnsafeBlocks>{13}</AllowUnsafeBlocks>{19}{20}",
+        @"    <AllowUnsafeBlocks>{13}</AllowUnsafeBlocks>{19}{20}{21}",
         @"  </PropertyGroup>"
       };
 
@@ -717,6 +738,11 @@ namespace Packages.Rider.Editor.ProjectGeneration
               {
                 return new KeyValuePair<string, string>(warnaserror, b.Substring(warnaserror.Length + 1));
               }
+              const string nullable = "nullable";
+              if (b.Substring(1).Equals(nullable))
+              {
+                return new KeyValuePair<string, string>(nullable, "enable");
+              }
 
               return default;
             });
@@ -726,11 +752,14 @@ namespace Packages.Rider.Editor.ProjectGeneration
       return paths;
     }
 
-    private string GenerateLangVersion(IEnumerable<string> langVersionList)
+    private string GenerateLangVersion(IEnumerable<string> langVersionList, ProjectPart assembly)
     {
       var langVersion = langVersionList.FirstOrDefault();
       if (!string.IsNullOrWhiteSpace(langVersion))
         return langVersion;
+#if UNITY_2020_2_OR_NEWER
+      return assembly.CompilerOptions.LanguageVersion;
+#endif
       return k_TargetLanguageVersion;
     }
 

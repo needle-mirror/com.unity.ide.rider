@@ -1,10 +1,18 @@
 # Code Editor Package for Rider
 
+## [3.0.4] - 2021-01-26
+
+Use LangVersion provided by Unity for generated csproj
+Improve documentation
+Support nullable provided in csc,rsp
+Avoid doing work in Unity seconary processes in UNITY_2021_1_OR_NEWER with UnityEditor.MPE.ProcessLevel.Secondary
+
+
 ## [3.0.3] - 2020-11-18
 
-Update License
-Avoid connecting Rider from secondary UnityEditor instances
-Fix RIDER-53082 - Generate csproj without cs files, when there are any assets inside
+- Update License
+- Avoid connecting Rider from secondary UnityEditor instances
+- Fix RIDER-53082 - Generate csproj without cs files, when there are any assets inside
 
 
 ## [3.0.2] - 2020-10-27

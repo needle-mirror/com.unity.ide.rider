@@ -8,6 +8,16 @@ After the window reloads, new settings that control production of .csproj files 
 ![](images/preferences-settings-external-tools-window.png) <br/>
 *External Tools tab in the Preferences window*
 
+## Commandline endpoints
+
+Q: Generate sln/csproj files for CI?
+
+A: `Unity -batchmode -quit -projectPath ProjectPath -executeMethod Packages.Rider.Editor.RiderScriptEditor.SyncSolution`
+
+Q: Generate sln/csproj and open External Editor?
+
+A: `Unity -batchmode -quit -projectPath ProjectPath -executeMethod Packages.Rider.Editor.RiderScriptEditor.SyncSolutionAndOpenExternalEditor`
+
 ## Package preferences
 
 |**Property:** |**Description:** |
@@ -29,13 +39,13 @@ This package also adds a second tab under **Preferences** named **Rider**, pictu
 <br/>*Rider tab in the Preferences window*
 
 > [!NOTE]
-> The Logging Level menu does not control the level of Unity's logging, only the level of log messages that Rider logs in its own log file. For more information on controlling Unity's logging level, see the [Stack Trace Logging section of the Console Window documentation](https://docs.unity3d.com/Manual/Console.html#StackTraceLogging).
+> The Logging Level menu does not control the level of Unity's logging, only the level of log messages that Rider package logs in its own log file. For more information on controlling Unity's logging level, see the [Stack Trace Logging section of the Console Window documentation](https://docs.unity3d.com/Manual/Console.html#StackTraceLogging).
 
 |**Property:** |**Description:** |
 |:---|:---|
 |__**Pass Console to Rider**__| If **Pass Console to Rider** is enabled, Rider can access data that Unity sends to the Unity Console and display it within its own environment instead. |
 |__**Log file**__ | The **Log file** field contains an **Open log** button. Select this button to open the log file inside the Rider IDE. This button is unavailable when **Logging Level** is set to **OFF**.  |
-|__Logging Level__ | The **Logging Level** menu controls which type of debug message Rider logs. If you pass the Unity Console output to Rider, this setting also filters which messages Rider logs. Rider logs all messages of the type you select as well as any messages of a more severe type. For example, if you choose **WARN**, then Rider logs all **ERROR** and **FATAL** messages as well as **WARN** messages. The message types are listed below in order of severity, with **FATAL** as the most severe type of message and **TRACE** as the least severe. |
+|__Logging Level__ | The **Logging Level** menu controls how detailed are the Rider package logs. Those logs may be used for troubleshooting communication between Rider and Unity. Rider package logs all messages of the type you select as well as any messages of a more severe type. For example, if you choose **WARN**, then Rider logs all **ERROR** and **FATAL** messages as well as **WARN** messages. The message types are listed below in order of severity, with **FATAL** as the most severe type of message and **TRACE** as the least severe. |
 |__**OFF**__ | Rider does not produce any logs. |
 |__**FATAL__ | Logs information relating to serious problems that cause the application to crash. This setting produces the smallest logs. |
 |__**ERROR**__ | Logs information about errors that prevent some functionality from working, but don’t cause the application to fail (for example, a failed database connection). |
