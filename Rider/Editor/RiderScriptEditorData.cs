@@ -42,8 +42,8 @@ namespace Packages.Rider.Editor
       var riderBuildNumber = RiderPathLocator.GetBuildNumber(editorInstallationPath);
       editorBuildNumber = riderBuildNumber.ToSerializableVersion();
       productInfo = RiderPathLocator.GetBuildVersion(editorInstallationPath);
-      if (riderBuildNumber == null)
-        shouldLoadEditorPlugin = false;
+      if (riderBuildNumber == null) // if we fail to parse for some reason
+        shouldLoadEditorPlugin = true;
 
       shouldLoadEditorPlugin = riderBuildNumber >= new Version("191.7141.156");
 

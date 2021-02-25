@@ -1,5 +1,12 @@
 # Code Editor Package for Rider
 
+## [3.0.5] - 2021-02-25
+
+More stable in case of possible Rider product code change, improve test. Allows using "Rider for Unreal" with Unity projects (https://youtrack.jetbrains.com/issue/RIDER-51203)
+Remove implicit dependency to Test-Framework package
+Fix "Unreachable code detected" warning (https://youtrack.jetbrains.com/issue/RIDER-57930)
+
+
 ## [3.0.4] - 2021-01-26
 
 Use LangVersion provided by Unity for generated csproj

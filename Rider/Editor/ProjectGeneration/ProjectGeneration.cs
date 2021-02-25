@@ -759,8 +759,9 @@ namespace Packages.Rider.Editor.ProjectGeneration
         return langVersion;
 #if UNITY_2020_2_OR_NEWER
       return assembly.CompilerOptions.LanguageVersion;
-#endif
+#else
       return k_TargetLanguageVersion;
+#endif
     }
 
     private static string GenerateAnalyserRuleSet(string[] paths)

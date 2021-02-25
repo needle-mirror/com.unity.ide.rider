@@ -252,10 +252,11 @@ namespace Packages.Rider.Editor
       if (!file.Exists) 
         return null;
       var text = File.ReadAllText(file.FullName);
-      if (text.Length <= 3) 
+      var index = text.IndexOf("-", StringComparison.Ordinal) + 1; // RD-191.7141.355
+      if (index <= 0) 
         return null;
       
-      var versionText = text.Substring(3);
+      var versionText = text.Substring(index);
       return Version.TryParse(versionText, out var v) ? v : null;
     }
 
