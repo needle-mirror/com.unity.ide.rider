@@ -38,7 +38,13 @@ namespace Packages.Rider.Editor.ProjectGeneration
         { "hlsl", ScriptingLanguage.None },
         { "glslinc", ScriptingLanguage.None },
         { "template", ScriptingLanguage.None },
-        { "raytrace", ScriptingLanguage.None }
+        { "raytrace", ScriptingLanguage.None },
+        { "json", ScriptingLanguage.None},
+        { "asmdef", ScriptingLanguage.None},
+        { "xaml", ScriptingLanguage.None},
+        { "tt", ScriptingLanguage.None},
+        { "t4", ScriptingLanguage.None},
+        { "ttinclude", ScriptingLanguage.None}
       };
 
     private string m_SolutionProjectEntryTemplate = string.Join(Environment.NewLine,
@@ -111,7 +117,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
     /// </param>
     public bool SyncIfNeeded(IEnumerable<string> affectedFiles, IEnumerable<string> reimportedFiles)
     {
-      SetupProjectSupportedExtensions();
+      SetupSupportedExtensions();
 
       if (HasFilesBeenModified(affectedFiles, reimportedFiles) || RiderScriptEditorData.instance.hasChanges || RiderScriptEditorData.instance.HasChangesInCompilationDefines())
       {
@@ -136,7 +142,8 @@ namespace Packages.Rider.Editor.ProjectGeneration
 
     public void Sync()
     {
-      SetupProjectSupportedExtensions();
+      m_AssemblyNameProvider.ResetPackageInfoCache();
+      SetupSupportedExtensions();
       var types = GetAssetPostprocessorTypes();
       isRiderProjectGeneration = true;
       var externalCodeAlreadyGeneratedProjects = OnPreGeneratingCSProjectFiles(types);
@@ -154,7 +161,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
       return m_FileIOProvider.Exists(SolutionFile());
     }
 
-    private void SetupProjectSupportedExtensions()
+    private void SetupSupportedExtensions()
     {
       m_ProjectSupportedExtensions = m_AssemblyNameProvider.ProjectSupportedExtensions;
     }
@@ -204,11 +211,23 @@ namespace Packages.Rider.Editor.ProjectGeneration
         projectParts.Add(new ProjectPart(assembly.name, assembly, additionalAssetsForProject));
       }
 
+      var riderAssembly = m_AssemblyNameProvider.GetAssemblies(_ => true).FirstOrDefault(a=>a.name == "Unity.Rider.Editor");
       var projectPartsWithoutAssembly = allAssetProjectParts.Where(a => !assemblyNames.Contains(a.Key));
-      projectParts.AddRange(projectPartsWithoutAssembly.Select(allAssetProjectPart => new ProjectPart(allAssetProjectPart.Key, null, allAssetProjectPart.Value)));
+      projectParts.AddRange(projectPartsWithoutAssembly.Select(allAssetProjectPart =>
+      {
+        Assembly assembly = null;
+        if (riderAssembly != null)
+          // We want to add those references, so that Rider would detect Unity path and version and provide rich features for shader files
+          assembly = new Assembly(allAssetProjectPart.Key, riderAssembly.outputPath, new string[0], new string[0],
+            new Assembly[0],
+            riderAssembly.compiledAssemblyReferences.Where(a =>
+              a.EndsWith("UnityEditor.dll") || a.EndsWith("UnityEngine.dll") ||
+              a.EndsWith("UnityEngine.CoreModule.dll")).ToArray(), riderAssembly.flags);
+        return new ProjectPart(allAssetProjectPart.Key, assembly, allAssetProjectPart.Value);
+      }));
 
       SyncSolution(projectParts.ToArray(), types);
-      
+
       foreach (var projectPart in projectParts)
       {
         SyncProject(projectPart, types, GetAllRoslynAnalyzerPaths().ToArray());
@@ -491,7 +510,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
         GenerateLangVersion(otherResponseFilesData["langversion"], assembly),
         k_BaseDirectory,
         assembly.CompilerOptions.AllowUnsafeCode | responseFilesData.Any(x => x.Unsafe),
-        GenerateNoWarn(otherResponseFilesData["nowarn"].Distinct().ToArray()),
+        GenerateNoWarn(otherResponseFilesData["nowarn"].ToList()),
         GenerateAnalyserItemGroup(
           otherResponseFilesData["analyzer"].Concat(otherResponseFilesData["a"])
                                                   .SelectMany(x=>x.Split(';'))
@@ -789,12 +808,17 @@ namespace Packages.Rider.Editor.ProjectGeneration
       return analyserBuilder.ToString();
     }
 
-    private static string GenerateNoWarn(string[] codes)
+    public static string GenerateNoWarn(List<string> codes)
     {
+#if UNITY_2020_1_OR_NEWER
+      if (PlayerSettings.suppressCommonWarnings)
+        codes.AddRange(new[] {"0169", "0649"});
+#endif
+
       if (!codes.Any())
         return string.Empty;
 
-      return $",{string.Join(",", codes)}";
+      return string.Join(",", codes.Distinct());
     }
     
     private string GetProjectEntries(ProjectPart[] islands)

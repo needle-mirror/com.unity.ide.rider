@@ -1,5 +1,16 @@
 # Code Editor Package for Rider
 
+## [3.0.6] - 2021-04-06
+
+Fix bug: For Unity 2021.1+ Switching external editor from VS => Rider won't create the connection between Unity and Rider.
+When PlayerSettings.suppressCommonWarnings is true, it is reflected in the generated csproj with NoWarn "0169", "0649"
+By default include T4 templates in the generated solution (RIDER-37159)
+RIDER-60554 Unity crash in case of project without Unity Test Framework Package.
+RIDER-60445 Fix presentation of Rider external editor, when it is installed in a custom location.
+Improve project files generation performance
+RIDER-60508 Project Generation for projects without any cs files - add reference to UnityEditor/UnityEngine, so that Rider would detect Unity path and version and provide rich features for shader file.
+
+
 ## [3.0.5] - 2021-02-25
 
 More stable in case of possible Rider product code change, improve test. Allows using "Rider for Unreal" with Unity projects (https://youtrack.jetbrains.com/issue/RIDER-51203)

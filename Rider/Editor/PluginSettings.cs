@@ -4,21 +4,18 @@ using UnityEngine;
 
 namespace Packages.Rider.Editor
 {
-  internal class PluginSettings
+  internal static class PluginSettings
   {
     public static LoggingLevel SelectedLoggingLevel
     {
       get => (LoggingLevel) EditorPrefs.GetInt("Rider_SelectedLoggingLevel", 0);
-      set
-      {
-        EditorPrefs.SetInt("Rider_SelectedLoggingLevel", (int) value);
-      }
+      private set => EditorPrefs.SetInt("Rider_SelectedLoggingLevel", (int) value);
     }
 
     public static bool LogEventsCollectorEnabled
     {
-      get { return EditorPrefs.GetBool("Rider_LogEventsCollectorEnabled", true); }
-      private set { EditorPrefs.SetBool("Rider_LogEventsCollectorEnabled", value); }
+      get => EditorPrefs.GetBool("Rider_LogEventsCollectorEnabled", true);
+      private set => EditorPrefs.SetBool("Rider_LogEventsCollectorEnabled", value);
     }
 
     /// <summary>

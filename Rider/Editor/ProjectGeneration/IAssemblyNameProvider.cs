@@ -19,5 +19,6 @@ namespace Packages.Rider.Editor.ProjectGeneration
     ResponseFileData ParseResponseFile(string responseFilePath, string projectDirectory, string[] systemReferenceDirectories);
     IEnumerable<string> GetRoslynAnalyzerPaths();
     void ToggleProjectGeneration(ProjectGenerationFlag preference);
+    void ResetPackageInfoCache();
   }
 }

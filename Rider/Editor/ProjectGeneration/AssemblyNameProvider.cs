@@ -9,10 +9,12 @@ namespace Packages.Rider.Editor.ProjectGeneration
 {
   internal class AssemblyNameProvider : IAssemblyNameProvider
   {
+    private readonly Dictionary<string, UnityEditor.PackageManager.PackageInfo> m_PackageInfoCache = new Dictionary<string, UnityEditor.PackageManager.PackageInfo>();
+
     ProjectGenerationFlag m_ProjectGenerationFlag = (ProjectGenerationFlag)EditorPrefs.GetInt("unity_project_generation_flag", 3);
 
     public string[] ProjectSupportedExtensions => EditorSettings.projectGenerationUserExtensions;
-
+    
     public string ProjectGenerationRootNamespace => EditorSettings.projectGenerationRootNamespace;
 
     public ProjectGenerationFlag ProjectGenerationFlag
@@ -77,9 +79,44 @@ namespace Packages.Rider.Editor.ProjectGeneration
       return AssetDatabase.GetAllAssetPaths();
     }
 
+    private static string ResolvePotentialParentPackageAssetPath(string assetPath)
+    {
+      const string packagesPrefix = "packages/";
+      if (!assetPath.StartsWith(packagesPrefix, StringComparison.OrdinalIgnoreCase))
+      {
+        return null;
+      }
+
+      var followupSeparator = assetPath.IndexOf('/', packagesPrefix.Length);
+      if (followupSeparator == -1)
+      {
+        return assetPath.ToLowerInvariant();
+      }
+
+      return assetPath.Substring(0, followupSeparator).ToLowerInvariant();
+    }
+
     public UnityEditor.PackageManager.PackageInfo FindForAssetPath(string assetPath)
     {
-      return UnityEditor.PackageManager.PackageInfo.FindForAssetPath(assetPath);
+      var parentPackageAssetPath = ResolvePotentialParentPackageAssetPath(assetPath);
+      if (parentPackageAssetPath == null)
+      {
+        return null;
+      }
+
+      if (m_PackageInfoCache.TryGetValue(parentPackageAssetPath, out var cachedPackageInfo))
+      {
+        return cachedPackageInfo;
+      }
+
+      var result = UnityEditor.PackageManager.PackageInfo.FindForAssetPath(parentPackageAssetPath);
+      m_PackageInfoCache[parentPackageAssetPath] = result;
+      return result;
+    }
+
+    public void ResetPackageInfoCache()
+    {
+      m_PackageInfoCache.Clear();
     }
 
     public bool IsInternalizedPackagePath(string path)

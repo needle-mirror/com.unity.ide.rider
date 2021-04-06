@@ -13,6 +13,7 @@ namespace Packages.Rider.Editor
     [SerializeField] internal bool shouldLoadEditorPlugin;
     [SerializeField] internal bool initializedOnce;
     [SerializeField] internal SerializableVersion editorBuildNumber;
+    [SerializeField] internal SerializableVersion prevEditorBuildNumber;
     [SerializeField] internal RiderPathLocator.ProductInfo productInfo;
     [SerializeField] internal string[] activeScriptCompilationDefines;
 
@@ -37,10 +38,12 @@ namespace Packages.Rider.Editor
       return !EditorUserBuildSettings.activeScriptCompilationDefines.SequenceEqual(activeScriptCompilationDefines);
     }
 
-    public void Invalidate(string editorInstallationPath)
+    public void Invalidate(string editorInstallationPath, bool shouldInvalidatePrevEditorBuildNumber = false)
     {
       var riderBuildNumber = RiderPathLocator.GetBuildNumber(editorInstallationPath);
       editorBuildNumber = riderBuildNumber.ToSerializableVersion();
+      if (shouldInvalidatePrevEditorBuildNumber)
+        prevEditorBuildNumber = editorBuildNumber;
       productInfo = RiderPathLocator.GetBuildVersion(editorInstallationPath);
       if (riderBuildNumber == null) // if we fail to parse for some reason
         shouldLoadEditorPlugin = true;

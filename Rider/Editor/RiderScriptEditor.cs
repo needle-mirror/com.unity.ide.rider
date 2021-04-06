@@ -186,7 +186,7 @@ namespace Packages.Rider.Editor
     {
       get
       {
-        var customExtensions = new[] {"json", "asmdef", "log", "xaml"};
+        var customExtensions = new[] {"log"};
         return EditorSettings.projectGenerationBuiltinExtensions.Concat(EditorSettings.projectGenerationUserExtensions)
           .Concat(customExtensions).Distinct().ToArray();
       }
@@ -287,10 +287,10 @@ namespace Packages.Rider.Editor
 
     public void Initialize(string editorInstallationPath) // is called each time ExternalEditor is changed
     {
-      var oldBuildNumber = RiderScriptEditorData.instance.editorBuildNumber;
+      var prevEditorBuildNumber = RiderScriptEditorData.instance.prevEditorBuildNumber;
       
-      RiderScriptEditorData.instance.Invalidate(editorInstallationPath);
-      if (oldBuildNumber.ToVersion() != RiderScriptEditorData.instance.editorBuildNumber.ToVersion()) // in Unity 2019.3 any change in preference causes `Initialize` call
+      RiderScriptEditorData.instance.Invalidate(editorInstallationPath, true);
+      if (prevEditorBuildNumber.ToVersion() != RiderScriptEditorData.instance.editorBuildNumber.ToVersion()) // in Unity 2019.3 any change in preference causes `Initialize` call
       {
         m_ProjectGeneration.Sync(); // regenerate csproj and sln for new editor
 #if UNITY_2019_3_OR_NEWER

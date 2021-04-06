@@ -19,14 +19,30 @@ namespace Packages.Rider.Editor
   {
     public CodeEditor.Installation[] PathCallback()
     {
-      return RiderPathLocator.GetAllRiderPaths()
+      var res = RiderPathLocator.GetAllRiderPaths()
         .Select(riderInfo => new CodeEditor.Installation
         {
           Path = riderInfo.Path,
           Name = riderInfo.Presentation
         })
-        .OrderBy(a=>a.Name)
-        .ToArray();
+        .ToList();
+
+      var editorPath = RiderScriptEditor.CurrentEditor;
+      if (RiderScriptEditor.IsRiderInstallation(editorPath) &&
+          !res.Any(a => a.Path == editorPath) &&
+          FileSystemUtil.EditorPathExists(editorPath))
+      {
+        // External editor manually set from custom location
+        var info = new RiderPathLocator.RiderInfo(editorPath, false);
+        var installation = new CodeEditor.Installation
+        {
+          Path = info.Path,
+          Name = info.Presentation
+        };
+        res.Add(installation);
+      }
+
+      return res.ToArray();
     }
   }
 
