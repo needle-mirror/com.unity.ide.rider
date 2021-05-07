@@ -40,7 +40,9 @@ namespace Packages.Rider.Editor.ProjectGeneration
         { "template", ScriptingLanguage.None },
         { "raytrace", ScriptingLanguage.None },
         { "json", ScriptingLanguage.None},
+        { "rsp", ScriptingLanguage.None},
         { "asmdef", ScriptingLanguage.None},
+        { "asmref", ScriptingLanguage.None},
         { "xaml", ScriptingLanguage.None},
         { "tt", ScriptingLanguage.None},
         { "t4", ScriptingLanguage.None},
@@ -55,19 +57,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
       @"        {{{0}}}.Debug|Any CPU.ActiveCfg = Debug|Any CPU",
       @"        {{{0}}}.Debug|Any CPU.Build.0 = Debug|Any CPU").Replace("    ", "\t");
 
-    private static readonly string[] k_ReimportSyncExtensions = { ".dll", ".asmdef" };
-
-    /// <summary>
-    /// Map ScriptingLanguages to project extensions
-    /// </summary>
-    /*static readonly Dictionary<ScriptingLanguage, string> k_ProjectExtensions = new Dictionary<ScriptingLanguage, string>
-    {
-        { ScriptingLanguage.CSharp, ".csproj" },
-        { ScriptingLanguage.None, ".csproj" },
-    };*/
-    private static readonly Regex k_ScriptReferenceExpression = new Regex(
-      @"^Library.ScriptAssemblies.(?<dllname>(?<project>.*)\.dll$)",
-      RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly string[] k_ReimportSyncExtensions = { ".dll", ".asmdef", ".asmref" };
 
     private string[] m_ProjectSupportedExtensions = new string[0];
 
@@ -176,16 +166,13 @@ namespace Packages.Rider.Editor.ProjectGeneration
       return HasValidExtension(file);
     }
 
-    private bool HasValidExtension(string file)
+    public bool HasValidExtension(string file)
     {
       var extension = Path.GetExtension(file);
 
       // Dll's are not scripts but still need to be included..
       if (extension.Equals(".dll", StringComparison.OrdinalIgnoreCase))
           return true;
-
-      if (extension.Equals(".asmdef", StringComparison.OrdinalIgnoreCase))
-        return true;
 
       return IsSupportedExtension(extension);
     }
@@ -524,7 +511,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
         GenerateAnalyserRuleSet(otherResponseFilesData["ruleset"].Distinct().ToArray()),
         #endif
         GenerateWarningLevel(otherResponseFilesData["warn"].Concat(otherResponseFilesData["w"]).Distinct()),
-        GenerateWarningAsError(otherResponseFilesData["warnaserror"]),
+        GenerateWarningAsError(otherResponseFilesData["warnaserror"], otherResponseFilesData["warnaserror-"], otherResponseFilesData["warnaserror+"]),
         GenerateDocumentationFile(otherResponseFilesData["doc"].ToArray()),
         GenerateNullable(otherResponseFilesData["nullable"])
       };
@@ -543,22 +530,11 @@ namespace Packages.Rider.Editor.ProjectGeneration
 
     private string GenerateNullable(IEnumerable<string> enumerable)
     {
-      if (!enumerable.Any())
+      var val = enumerable.FirstOrDefault();
+      if (string.IsNullOrWhiteSpace(val)) 
         return string.Empty;
-
-      var returnValue = string.Empty;
-      var val = string.Empty;
-
-      foreach (var s in enumerable)
-      {
-        if (s == "+") val = "enable";
-        else if (s == "-") val = "disable";
-        else val = s;
-      }
-
-      returnValue += $@"    <Nullable>{val}</Nullable>";
-
-      return $"{Environment.NewLine}{returnValue}";
+      
+      return $"{Environment.NewLine}    <Nullable>{val}</Nullable>";
     }
 
     private static string GenerateDocumentationFile(string[] paths)
@@ -569,21 +545,23 @@ namespace Packages.Rider.Editor.ProjectGeneration
       return $"{Environment.NewLine}{string.Join(Environment.NewLine, paths.Select(a => $"  <DocumentationFile>{a}</DocumentationFile>"))}";
     }
 
-    private static string GenerateWarningAsError(IEnumerable<string> enumerable)
+    private static string GenerateWarningAsError(IEnumerable<string> args, IEnumerable<string> argsMinus, IEnumerable<string> argsPlus)
     {
       var returnValue = String.Empty;
       var allWarningsAsErrors = false;
       var warningIds = new List<string>();
 
-      foreach (var s in enumerable)
+      foreach (var s in args)
       {
-        if (s == "+") allWarningsAsErrors = true;
+        if (s == "+" || s == string.Empty) allWarningsAsErrors = true;
         else if (s == "-") allWarningsAsErrors = false;
         else
         {
           warningIds.Add(s);
         }
       }
+      
+      warningIds.AddRange(argsPlus);
 
       returnValue += $@"    <TreatWarningsAsErrors>{allWarningsAsErrors}</TreatWarningsAsErrors>";
       if (warningIds.Any())
@@ -591,6 +569,9 @@ namespace Packages.Rider.Editor.ProjectGeneration
         returnValue += $"{Environment.NewLine}    <WarningsAsErrors>{string.Join(";", warningIds)}</WarningsAsErrors>";
       }
 
+      if (argsMinus.Any())
+        returnValue += $"{Environment.NewLine}    <WarningsNotAsErrors>{string.Join(";", argsMinus)}</WarningsNotAsErrors>";
+      
       return $"{Environment.NewLine}{returnValue}";
     }
 
@@ -758,9 +739,14 @@ namespace Packages.Rider.Editor.ProjectGeneration
                 return new KeyValuePair<string, string>(warnaserror, b.Substring(warnaserror.Length + 1));
               }
               const string nullable = "nullable";
-              if (b.Substring(1).Equals(nullable))
+              if (b.Substring(1).StartsWith(nullable))
               {
-                return new KeyValuePair<string, string>(nullable, "enable");
+                var res = b.Substring(nullable.Length + 1);
+                if (string.IsNullOrWhiteSpace(res) || res.Equals("+"))
+                  res = "enable";
+                else if (res.Equals("-"))
+                  res = "disable";
+                return new KeyValuePair<string, string>(nullable, res);
               }
 
               return default;

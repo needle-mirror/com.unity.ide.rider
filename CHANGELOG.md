@@ -1,29 +1,36 @@
 # Code Editor Package for Rider
 
+## [3.0.7] - 2021-05-07
+
+- RIDER-60815 Simplify extensions lists for Rider package
+ - Fix csc.rsp `-nullable+` / `-nullable-` parsing https://github.com/van800/com.unity.ide.rider/issues/7
+ - Support `-warnaserror`/`-warnaserror-:`/`-warnaserror+:` in csc.rsp
+
+
 ## [3.0.6] - 2021-04-06
 
-Fix bug: For Unity 2021.1+ Switching external editor from VS => Rider won't create the connection between Unity and Rider.
-When PlayerSettings.suppressCommonWarnings is true, it is reflected in the generated csproj with NoWarn "0169", "0649"
-By default include T4 templates in the generated solution (RIDER-37159)
-RIDER-60554 Unity crash in case of project without Unity Test Framework Package.
-RIDER-60445 Fix presentation of Rider external editor, when it is installed in a custom location.
-Improve project files generation performance
-RIDER-60508 Project Generation for projects without any cs files - add reference to UnityEditor/UnityEngine, so that Rider would detect Unity path and version and provide rich features for shader file.
+- Fix bug: For Unity 2021.1+ Switching external editor from VS => Rider won't create the connection between Unity and Rider.
+- When PlayerSettings.suppressCommonWarnings is true, it is reflected in the generated csproj with NoWarn "0169", "0649"
+- By default include T4 templates in the generated solution (RIDER-37159)
+- RIDER-60554 Unity crash in case of project without Unity Test Framework Package.
+- RIDER-60445 Fix presentation of Rider external editor, when it is installed in a custom location.
+- Improve project files generation performance
+- RIDER-60508 Project Generation for projects without any cs files - add reference to UnityEditor/UnityEngine, so that Rider would detect Unity path and version and provide rich features for shader file.
 
 
 ## [3.0.5] - 2021-02-25
 
-More stable in case of possible Rider product code change, improve test. Allows using "Rider for Unreal" with Unity projects (https://youtrack.jetbrains.com/issue/RIDER-51203)
-Remove implicit dependency to Test-Framework package
-Fix "Unreachable code detected" warning (https://youtrack.jetbrains.com/issue/RIDER-57930)
+- More stable in case of possible Rider product code change, improve test. Allows using "Rider for Unreal" with Unity projects (https://youtrack.jetbrains.com/issue/RIDER-51203)
+- Remove implicit dependency to Test-Framework package
+- Fix "Unreachable code detected" warning (https://youtrack.jetbrains.com/issue/RIDER-57930)
 
 
 ## [3.0.4] - 2021-01-26
 
-Use LangVersion provided by Unity for generated csproj
-Improve documentation
-Support nullable provided in csc,rsp
-Avoid doing work in Unity seconary processes in UNITY_2021_1_OR_NEWER with UnityEditor.MPE.ProcessLevel.Secondary
+- Use LangVersion provided by Unity for generated csproj
+- Improve documentation
+- Support nullable provided in csc,rsp
+- Avoid doing work in Unity secondary processes in UNITY_2021_1_OR_NEWER with UnityEditor.MPE.ProcessLevel.Secondary
 
 
 ## [3.0.3] - 2020-11-18

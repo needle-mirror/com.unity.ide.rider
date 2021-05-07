@@ -182,45 +182,21 @@ namespace Packages.Rider.Editor
       m_ProjectGeneration = projectGeneration;
     }
 
-    private static string[] defaultExtensions
-    {
-      get
-      {
-        var customExtensions = new[] {"log"};
-        return EditorSettings.projectGenerationBuiltinExtensions.Concat(EditorSettings.projectGenerationUserExtensions)
-          .Concat(customExtensions).Distinct().ToArray();
-      }
-    }
-
-    private static string[] HandledExtensions
-    {
-      get
-      {
-        return HandledExtensionsString.Split(new[] {';'}, StringSplitOptions.RemoveEmptyEntries).Select(s => s.TrimStart('.', '*'))
-          .ToArray();
-      } 
-    }
-
-    private static string HandledExtensionsString
-    {
-      get { return EditorPrefs.GetString("Rider_UserExtensions", string.Join(";", defaultExtensions));}
-      set { EditorPrefs.SetString("Rider_UserExtensions", value); }
-    }
-
-    private static bool SupportsExtension(string path)
-    {
-      var extension = Path.GetExtension(path);
-      if (string.IsNullOrEmpty(extension))
-        return false;
-      // cs is a default extension, which should always be handled
-      return extension == ".cs" || HandledExtensions.Contains(extension.TrimStart('.'));
-    }
-
     public void OnGUI()
     {
       if (RiderScriptEditorData.instance.shouldLoadEditorPlugin)
       {
-        HandledExtensionsString = EditorGUILayout.TextField(new GUIContent("Extensions handled: "), HandledExtensionsString);
+        GUILayout.BeginHorizontal();
+        
+        var style = GUI.skin.label;
+        var text = "Customize handled extensions in";
+        EditorGUILayout.LabelField(text, style, GUILayout.Width(style.CalcSize(new GUIContent(text)).x));
+
+        if (PluginSettings.LinkButton("Project Settings | Editor | Additional extensions to include"))
+        {
+          SettingsService.OpenProjectSettings("Project/Editor"); // how do I focus "Additional extensions to include"?
+        }
+        GUILayout.EndHorizontal();
       }
 
       EditorGUILayout.LabelField("Generate .csproj files for:");
@@ -304,7 +280,9 @@ namespace Packages.Rider.Editor
 
     public bool OpenProject(string path, int line, int column)
     {
-      if (path != "" && !SupportsExtension(path)) // Assets - Open C# Project passes empty path here
+      var projectGeneration = (ProjectGeneration.ProjectGeneration) m_ProjectGeneration;
+      // Assets - Open C# Project passes empty path here
+      if (path != "" && !projectGeneration.HasValidExtension(path))
       {
         return false;
       }
