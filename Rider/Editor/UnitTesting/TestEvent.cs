@@ -8,13 +8,13 @@ namespace Packages.Rider.Editor.UnitTesting
   /// Is used by Rider Unity plugin by reflection
   /// </summary>
   [Serializable]
-  public enum EventType { TestStarted, TestFinished, RunFinished, RunStarted } // do not reorder
+  internal enum EventType { TestStarted, TestFinished, RunFinished, RunStarted } // do not reorder
 
   /// <summary>
   /// Is used by Rider Unity plugin by reflection
   /// </summary>
   [Serializable]
-  public class TestEvent
+  internal class TestEvent
   {
     public EventType type;
     public string id;

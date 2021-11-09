@@ -7,7 +7,7 @@ using UnityEngine.TestRunner;
 
 namespace Packages.Rider.Editor.UnitTesting
 {
-  public class SyncTestRunCallback : ITestRunCallback
+  internal class SyncTestRunCallback : ITestRunCallback
   {
     public void RunStarted(ITest testsToRun)
     {

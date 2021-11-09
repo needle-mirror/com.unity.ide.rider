@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Packages.Rider.Editor.UnitTesting
 {
-  public class TestsCallback : ScriptableObject, IErrorCallbacks
+  internal class TestsCallback : ScriptableObject, IErrorCallbacks
     {
         public void RunFinished(ITestResultAdaptor result)
         {

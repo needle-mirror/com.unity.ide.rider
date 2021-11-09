@@ -6,5 +6,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
 
     string ReadAllText(string fileName);
     void WriteAllText(string fileName, string content);
+
+    string EscapedRelativePathFor(string file, string projectDirectory);
   }
 }
