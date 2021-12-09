@@ -1,9 +1,9 @@
 namespace Packages.Rider.Editor.ProjectGeneration {
   class GUIDProvider : IGUIDGenerator
   {
-    public string ProjectGuid(string projectName, string assemblyName)
+    public string ProjectGuid(string name)
     {
-      return SolutionGuidGenerator.GuidForProject(projectName + assemblyName);
+      return SolutionGuidGenerator.GuidForProject(name);
     }
   }
 }

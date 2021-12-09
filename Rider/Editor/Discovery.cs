@@ -308,16 +308,24 @@ namespace Packages.Rider.Editor
     private static void CollectPathsFromRegistry(List<string> installPaths, RegistryKey key)
     {
       if (key == null) return;
-      foreach (var subkeyName in key.GetSubKeyNames().Where(a => a.Contains("Rider")))
+      foreach (var subkeyName in key.GetSubKeyNames())
       {
         using (var subkey = key.OpenSubKey(subkeyName))
         {
           var folderObject = subkey?.GetValue("InstallLocation");
           if (folderObject == null) continue;
           var folder = folderObject.ToString();
-          var possiblePath = Path.Combine(folder, @"bin\rider64.exe");
-          if (File.Exists(possiblePath))
-            installPaths.Add(possiblePath);
+          if (folder.Length == 0) continue;
+          var displayName = subkey.GetValue("DisplayName");
+          if (displayName == null) continue;
+          if (!displayName.ToString().Contains("Rider")) continue;
+          try // possible "illegal characters in path"
+          {
+            var possiblePath = Path.Combine(folder, @"bin\rider64.exe"); 
+            if (File.Exists(possiblePath))
+              installPaths.Add(possiblePath);
+          }
+          catch (ArgumentException) { }
         }
       }
     }

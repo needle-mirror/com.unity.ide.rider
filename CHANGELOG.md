@@ -1,8 +1,18 @@
 # Code Editor Package for Rider
 
+## [3.0.10] - 2021-12-09
+
+- Fix presentation of the TargetFramework in the csproj
+- Fix: Auto-generated solution doesn't compile when code overrides virtual functions in other assemblies
+- Fix RIDER-72234 Avoid full project generation, when only content of assembly was changed
+- Fix RIDER-71985 Building large Unity projects randomly fails
+- Fix RIDER-72174 Looking for Rider installed by dotUltimate installer
+
+
 ## [3.0.9] - 2021-11-09
 
-Fix path for Roslyn analyser supplied with a package
+- Fix path for Roslyn analyser supplied with a package
+- Minimal requirement for roslyn analyzer scope is Unity 2020.3.6f1 and above 
 
 
 ## [3.0.8] - 2021-11-08

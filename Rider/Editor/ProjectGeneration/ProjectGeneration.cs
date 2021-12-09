@@ -56,8 +56,6 @@ namespace Packages.Rider.Editor.ProjectGeneration
       @"        {{{0}}}.Debug|Any CPU.ActiveCfg = Debug|Any CPU",
       @"        {{{0}}}.Debug|Any CPU.Build.0 = Debug|Any CPU").Replace("    ", "\t");
 
-    private static readonly string[] k_ReimportSyncExtensions = { ".dll", ".asmdef", ".asmref" };
-
     private string[] m_ProjectSupportedExtensions = new string[0];
 
     public string ProjectDirectory { get; }
@@ -72,7 +70,6 @@ namespace Packages.Rider.Editor.ProjectGeneration
     private const string k_ToolsVersion = "4.0";
     private const string k_ProductVersion = "10.0.20506";
     private const string k_BaseDirectory = ".";
-    private const string k_TargetFrameworkVersion = "v4.7.1";
     private const string k_TargetLanguageVersion = "latest";
 
     IAssemblyNameProvider IGenerator.AssemblyNameProvider => m_AssemblyNameProvider;
@@ -126,7 +123,8 @@ namespace Packages.Rider.Editor.ProjectGeneration
 
     private static bool ShouldSyncOnReimportedAsset(string asset)
     {
-      return k_ReimportSyncExtensions.Contains(Path.GetExtension(asset)) || Path.GetFileName(asset) == "csc.rsp";
+      var extension = Path.GetExtension(asset);
+      return extension == ".asmdef" || extension == ".asmref" || Path.GetFileName(asset) == "csc.rsp";
     }
 
     public void Sync()
@@ -434,9 +432,10 @@ namespace Packages.Rider.Editor.ProjectGeneration
         projectBuilder.Append("  <ItemGroup>").Append(Environment.NewLine);
         foreach (var reference in assembly.AssemblyReferences.Where(i => i.sourceFiles.Any(ShouldFileBePartOfSolution)))
         {
-          projectBuilder.Append("    <ProjectReference Include=\"").Append(reference.name).Append(GetProjectExtension()).Append("\">").Append(Environment.NewLine);
-          projectBuilder.Append("      <Project>{").Append(ProjectGuid(reference.name, reference.outputPath)).Append("}</Project>").Append(Environment.NewLine);
-          projectBuilder.Append("      <Name>").Append(reference.name).Append("</Name>").Append(Environment.NewLine);
+          var name = m_AssemblyNameProvider.GetProjectName(reference.name, reference.defines);
+          projectBuilder.Append("    <ProjectReference Include=\"").Append(name).Append(GetProjectExtension()).Append("\">").Append(Environment.NewLine);
+          projectBuilder.Append("      <Project>{").Append(ProjectGuid(name)).Append("}</Project>").Append(Environment.NewLine);
+          projectBuilder.Append("      <Name>").Append(name).Append("</Name>").Append(Environment.NewLine);
           projectBuilder.Append("    </ProjectReference>").Append(Environment.NewLine);
         }
       }
@@ -457,7 +456,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
 
     private string ProjectFile(ProjectPart projectPart)
     {
-      return Path.Combine(ProjectDirectory, $"{m_AssemblyNameProvider.GetProjectName(projectPart.OutputPath, projectPart.Name)}.csproj");
+      return Path.Combine(ProjectDirectory, $"{m_AssemblyNameProvider.GetProjectName(projectPart.Name, projectPart.Defines)}.csproj");
     }
 
     public string SolutionFile()
@@ -475,7 +474,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
       {
         k_ToolsVersion,
         k_ProductVersion,
-        ProjectGuid(assembly.Name, assembly.OutputPath),
+        ProjectGuid(m_AssemblyNameProvider.GetProjectName(assembly.Name, assembly.Defines)),
         InternalEditorUtility.GetEngineAssemblyPath(),
         InternalEditorUtility.GetEditorAssemblyPath(),
         string.Join(";", assembly.Defines.Concat(responseFilesData.SelectMany(x => x.Defines)).Distinct().ToArray()),
@@ -483,7 +482,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
         assembly.Name,
         assembly.OutputPath,
         assembly.RootNamespace,
-        k_TargetFrameworkVersion,
+        assembly.CompilerOptions.ApiCompatibilityLevel,
         GenerateLangVersion(otherResponseFilesData["langversion"], assembly),
         k_BaseDirectory,
         assembly.CompilerOptions.AllowUnsafeCode | responseFilesData.Any(x => x.Unsafe),
@@ -661,7 +660,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
         @"    <OutputType>Library</OutputType>",
         @"    <AppDesignerFolder>Properties</AppDesignerFolder>",
         @"    <AssemblyName>{7}</AssemblyName>",
-        @"    <TargetFrameworkVersion>{10}</TargetFrameworkVersion>",
+        @"    <TargetFramework>{10}</TargetFramework>",
         @"    <FileAlignment>512</FileAlignment>",
         @"    <BaseDirectory>{12}</BaseDirectory>",
         @"  </PropertyGroup>",
@@ -711,7 +710,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
       
       var projectEntries = GetProjectEntries(islands);
       var projectConfigurations = string.Join(Environment.NewLine,
-        islands.Select(i => GetProjectActiveConfigurations(ProjectGuid(i.Name, i.OutputPath))).ToArray());
+        islands.Select(i => GetProjectActiveConfigurations(ProjectGuid(m_AssemblyNameProvider.GetProjectName(i.Name, i.Defines)))).ToArray());
       return string.Format(GetSolutionText(), fileversion, vsversion, projectEntries, projectConfigurations);
     }
 
@@ -831,7 +830,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
         SolutionGuidGenerator.GuidForSolution(),
         i.Name,
         Path.GetFileName(ProjectFile(i)),
-        ProjectGuid(i.Name, i.OutputPath)
+        ProjectGuid(m_AssemblyNameProvider.GetProjectName(i.Name, i.Defines))
       ));
 
       return string.Join(Environment.NewLine, projectEntries.ToArray());
@@ -857,11 +856,9 @@ namespace Packages.Rider.Editor.ProjectGeneration
       return ".csproj";
     }
 
-    private string ProjectGuid(string name, string outputPath)
+    private string ProjectGuid(string name)
     {
-      return m_GUIDGenerator.ProjectGuid(
-        m_ProjectName,
-        m_AssemblyNameProvider.GetProjectName(outputPath, name));
+      return m_GUIDGenerator.ProjectGuid(m_ProjectName + name);
     }
   }
 }

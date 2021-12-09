@@ -11,7 +11,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
     ProjectGenerationFlag ProjectGenerationFlag { get; }
 
     string GetAssemblyNameFromScriptPath(string path);
-    string GetProjectName(string assemblyOutputPath, string assemblyName);
+    string GetProjectName(string name, string[] defines);
     bool IsInternalizedPackagePath(string path);
     IEnumerable<Assembly> GetAssemblies(Func<string, bool> shouldFileBePartOfSolution);
     IEnumerable<string> GetAllAssetPaths();
