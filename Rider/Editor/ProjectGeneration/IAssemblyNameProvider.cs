@@ -20,5 +20,6 @@ namespace Packages.Rider.Editor.ProjectGeneration
     IEnumerable<string> GetRoslynAnalyzerPaths();
     void ToggleProjectGeneration(ProjectGenerationFlag preference);
     void ResetPackageInfoCache();
+    void ResetAssembliesCache();
   }
 }

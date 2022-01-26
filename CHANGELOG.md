@@ -1,5 +1,10 @@
 # Code Editor Package for Rider
 
+## [3.0.12] - 2022-01-26
+
+Fix bug, which was introduced in 3.0.10: New script was not added to the csproj, because cached list of assemblies was used.
+
+
 ## [3.0.10] - 2021-12-09
 
 - Fix presentation of the TargetFramework in the csproj

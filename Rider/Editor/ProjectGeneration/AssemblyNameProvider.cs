@@ -119,6 +119,12 @@ namespace Packages.Rider.Editor.ProjectGeneration
       m_PackageInfoCache.Clear();
     }
 
+    public void ResetAssembliesCache()
+    {
+      m_AllEditorAssemblies = null;
+      m_AllPlayerAssemblies = null;
+    }
+
     public bool IsInternalizedPackagePath(string path)
     {
       if (string.IsNullOrEmpty(path.Trim()))
