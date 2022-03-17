@@ -5,7 +5,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
     bool Exists(string fileName);
 
     string ReadAllText(string fileName);
-    void WriteAllText(string fileName, string content);
+    void WriteAllText(string path, string content);
 
     string EscapedRelativePathFor(string file, string projectDirectory);
   }

@@ -15,7 +15,9 @@
         "nunit.framework.dll"
     ],
     "autoReferenced": true,
-    "defineConstraints": [],
+    "defineConstraints": [
+        "UNITY_2019_2_OR_NEWER"
+    ],
     "versionDefines": [
         {
             "name": "com.unity.test-framework",

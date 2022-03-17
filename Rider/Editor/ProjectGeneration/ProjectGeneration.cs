@@ -101,11 +101,16 @@ namespace Packages.Rider.Editor.ProjectGeneration
     /// <param name="reimportedFiles">
     /// A set of files that got reimported
     /// </param>
-    public bool SyncIfNeeded(IEnumerable<string> affectedFiles, IEnumerable<string> reimportedFiles)
+    /// <param name="checkProjectFiles">
+    /// Check if project files were changed externally
+    /// </param>
+    public bool SyncIfNeeded(IEnumerable<string> affectedFiles, IEnumerable<string> reimportedFiles, bool checkProjectFiles = false)
     {
       SetupSupportedExtensions();
 
-      if (HasFilesBeenModified(affectedFiles, reimportedFiles) || RiderScriptEditorData.instance.hasChanges || RiderScriptEditorData.instance.HasChangesInCompilationDefines())
+      if (HasFilesBeenModified(affectedFiles, reimportedFiles) || RiderScriptEditorData.instance.hasChanges 
+                                                               || RiderScriptEditorData.instance.HasChangesInCompilationDefines()
+                                                               || (checkProjectFiles && LastWriteTracker.HasLastWriteTimeChanged()))
       {
         Sync();
         RiderScriptEditorData.instance.hasChanges = false;
@@ -383,11 +388,11 @@ namespace Packages.Rider.Editor.ProjectGeneration
       return content;
     }
 
-    private void SyncFileIfNotChanged(string filename, string newContents)
+    private void SyncFileIfNotChanged(string path, string newContents)
     {
       try
       {
-        if (m_FileIOProvider.Exists(filename) && newContents == m_FileIOProvider.ReadAllText(filename))
+        if (m_FileIOProvider.Exists(path) && newContents == m_FileIOProvider.ReadAllText(path))
         {
           return;
         }
@@ -397,7 +402,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
         Debug.LogException(exception);
       }
 
-      m_FileIOProvider.WriteAllText(filename, newContents);
+      m_FileIOProvider.WriteAllText(path, newContents);
     }
 
     private string ProjectText(ProjectPart assembly)

@@ -6,27 +6,25 @@ using UnityEditor;
 
 namespace Packages.Rider.Editor.UnitTesting
 {
-  /// <summary>
-  /// Is used by Rider Unity plugin by reflection
-  /// </summary>
-  [UsedImplicitly] // from Rider Unity plugin
   internal class CallbackData : ScriptableSingleton<CallbackData>
   {
+    /// <summary>
+    /// identifies that tests were started from Rider
+    /// </summary>
     public bool isRider;
 
-    [UsedImplicitly] public static event EventHandler Changed = (sender, args) => { }; 
+    [UsedImplicitly] // Is used by Rider Unity plugin by reflection
+    public static event EventHandler Changed = (sender, args) => { }; 
 
     internal void RaiseChangedEvent()
     {
       Changed(null, EventArgs.Empty);
     }
 
+    [UsedImplicitly] // Is used by Rider Unity plugin by reflection
     public List<TestEvent> events = new List<TestEvent>();
-
-    /// <summary>
-    /// Is used by Rider Unity plugin by reflection
-    /// </summary>
-    [UsedImplicitly]
+    
+    [UsedImplicitly] // Is used by Rider Unity plugin by reflection
     public void Clear()
     {
       events.Clear();

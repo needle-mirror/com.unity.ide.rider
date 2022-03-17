@@ -1,5 +1,6 @@
 #if TEST_FRAMEWORK
 using System;
+using System.Linq;
 using System.Text;
 using UnityEditor.TestTools.TestRunner.Api;
 using UnityEngine;
@@ -26,19 +27,22 @@ namespace Packages.Rider.Editor.UnitTesting
 
         public void TestStarted(ITestAdaptor result)
         {
-          if (result.Method == null) return;
-          
+          // RIDER-69927 "Test not run" status is shown for the test suite when running unit tests for Unity project
+          var method = result.Method ?? result.Children.Select(a=>a.Method).FirstOrDefault(b => b != null);
+          if (method == null) return;
+
           CallbackData.instance.events.Add(
-           new TestEvent(EventType.TestStarted, GenerateId(result), result.Method.TypeInfo.Assembly.GetName().Name, "", 0, NUnit.Framework.Interfaces.TestStatus.Passed, GenerateId(result.Parent)));
+           new TestEvent(EventType.TestStarted, GenerateId(result), method.TypeInfo.Assembly.GetName().Name, "", 0, NUnit.Framework.Interfaces.TestStatus.Passed, GenerateId(result.Parent)));
           CallbackData.instance.RaiseChangedEvent();
         }
 
         public void TestFinished(ITestResultAdaptor result)
         {
-          if (result.Test.Method == null) return;
+          var method = result.Test.Method ?? result.Children.Select(a=>a.Test.Method).FirstOrDefault(b => b != null);
+          if (method == null) return;
           
           CallbackData.instance.events.Add(
-            new TestEvent(EventType.TestFinished, GenerateId(result.Test), result.Test.Method.TypeInfo.Assembly.GetName().Name, ExtractOutput(result), (result.EndTime-result.StartTime).Milliseconds, ParseTestStatus(result.TestStatus), GenerateId(result.Test.Parent)));
+            new TestEvent(EventType.TestFinished, GenerateId(result.Test), method.TypeInfo.Assembly.GetName().Name, ExtractOutput(result), (result.EndTime-result.StartTime).Milliseconds, ParseTestStatus(result.TestStatus), GenerateId(result.Test.Parent)));
           CallbackData.instance.RaiseChangedEvent();
         }
 

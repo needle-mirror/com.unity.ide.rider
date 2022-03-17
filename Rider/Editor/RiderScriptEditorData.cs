@@ -9,7 +9,7 @@ namespace Packages.Rider.Editor
 {
   internal class RiderScriptEditorData : ScriptableSingleton<RiderScriptEditorData>
   {
-    [SerializeField] internal bool hasChanges = true; // sln/csproj files were changed 
+    [SerializeField] internal bool hasChanges = true; // activeBuildTargetChanged has changed
     [SerializeField] internal bool shouldLoadEditorPlugin;
     [SerializeField] internal bool initializedOnce;
     [SerializeField] internal SerializableVersion editorBuildNumber;

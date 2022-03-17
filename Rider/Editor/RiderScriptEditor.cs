@@ -86,22 +86,6 @@ namespace Packages.Rider.Editor
             editor.m_Initiliazer.Initialize(path);
           }
 
-          RiderFileSystemWatcher.InitWatcher(
-            Directory.GetCurrentDirectory(), "*.csproj", (sender, args) =>
-            {
-              RiderScriptEditorData.instance.hasChanges = true;
-            });
-
-          RiderFileSystemWatcher.InitWatcher(
-            Directory.GetCurrentDirectory(), "*.sln", (sender, args) =>
-            {
-              RiderScriptEditorData.instance.hasChanges = true;
-            });
-          
-          RiderFileSystemWatcher.InitWatcher(
-            Path.Combine(Directory.GetCurrentDirectory(), "Packages"),
-            "manifest.json", (sender, args) => { RiderScriptEditorData.instance.hasChanges = true; });
-
           // can't switch to non-deprecated api, because UnityEditor.Build.BuildPipelineInterfaces.processors is internal
 #pragma warning disable 618
           EditorUserBuildSettings.activeBuildTargetChanged += () =>
@@ -241,7 +225,7 @@ namespace Packages.Rider.Editor
       m_ProjectGeneration.SyncIfNeeded(addedFiles.Union(deletedFiles).Union(movedFiles).Union(movedFromFiles),
         importedFiles);
     }
-
+    
     public void SyncAll()
     {
       AssetDatabase.Refresh();
@@ -252,6 +236,13 @@ namespace Packages.Rider.Editor
     public static void SyncSolution() // generate-the-sln-file-via-script-or-command-line
     {
       m_ProjectGeneration.Sync();
+    }
+    
+    [UsedImplicitly] // called from Rider EditorPlugin with reflection
+    public static void SyncIfNeeded(bool checkProjectFiles)
+    {
+      AssetDatabase.Refresh();
+      m_ProjectGeneration.SyncIfNeeded(new string[] { }, new string[] { }, checkProjectFiles);
     }
     
     [UsedImplicitly]

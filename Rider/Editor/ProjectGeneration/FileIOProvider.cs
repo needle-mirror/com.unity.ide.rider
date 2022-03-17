@@ -17,9 +17,10 @@ namespace Packages.Rider.Editor.ProjectGeneration {
       return File.ReadAllText(fileName);
     }
 
-    public void WriteAllText(string fileName, string content)
+    public void WriteAllText(string path, string content)
     {
-      File.WriteAllText(fileName, content, Encoding.UTF8);
+      File.WriteAllText(path, content, Encoding.UTF8);
+      LastWriteTracker.UpdateLastWriteIfNeeded(path);
     }
 
     public string EscapedRelativePathFor(string file, string projectDirectory)

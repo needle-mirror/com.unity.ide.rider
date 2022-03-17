@@ -1,8 +1,10 @@
 # Code Editor Package for Rider
 
-## [3.0.12] - 2022-01-26
+## [3.0.13] - 2022-03-17
 
-Fix bug, which was introduced in 3.0.10: New script was not added to the csproj, because cached list of assemblies was used.
+ - fix RIDER-69927 "Test not run" status is shown for the test suite when running unit tests for Unity project
+ - fix RIDER-74676 Unity plugin "JetBrainseRider Editor" completely breaks <= 2019.1.9
+ - fix RIDER-71503 Unity Hang on "Domain Unload", caused by dispose of FileSystemWatcher
 
 
 ## [3.0.10] - 2021-12-09
