@@ -1,10 +1,9 @@
 # Code Editor Package for Rider
 
-## [3.0.13] - 2022-03-17
+## [3.0.14] - 2022-04-07
 
- - fix RIDER-69927 "Test not run" status is shown for the test suite when running unit tests for Unity project
- - fix RIDER-74676 Unity plugin "JetBrainseRider Editor" completely breaks <= 2019.1.9
- - fix RIDER-71503 Unity Hang on "Domain Unload", caused by dispose of FileSystemWatcher
+- Move Rider package persisted state to Library, to avoid vcs collisions or adding it specifically to gitignore
+
 
 
 ## [3.0.10] - 2021-12-09
