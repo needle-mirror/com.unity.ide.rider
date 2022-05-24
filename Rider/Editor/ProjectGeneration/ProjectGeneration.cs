@@ -134,8 +134,6 @@ namespace Packages.Rider.Editor.ProjectGeneration
 
     public void Sync()
     {
-      m_AssemblyNameProvider.ResetPackageInfoCache();
-      m_AssemblyNameProvider.ResetAssembliesCache();
       SetupSupportedExtensions();
       var types = GetAssetPostprocessorTypes();
       isRiderProjectGeneration = true;
@@ -147,6 +145,8 @@ namespace Packages.Rider.Editor.ProjectGeneration
       }
 
       OnGeneratedCSProjectFiles(types);
+      m_AssemblyNameProvider.ResetPackageInfoCache();
+      m_AssemblyNameProvider.ResetAssembliesCache();
     }
 
     public bool HasSolutionBeenGenerated()
@@ -201,20 +201,17 @@ namespace Packages.Rider.Editor.ProjectGeneration
         projectParts.Add(new ProjectPart(assembly.name, assembly, additionalAssetsForProject));
       }
 
-      var riderAssembly = m_AssemblyNameProvider.GetAssemblies(_ => true).FirstOrDefault(a=>a.name == "Unity.Rider.Editor");
+      var executingAssemblyName = typeof(ProjectGeneration).Assembly.GetName().Name;
+      var riderAssembly = m_AssemblyNameProvider.GetAssemblies(_ => true).FirstOrDefault(a=>a.name == executingAssemblyName);
       var projectPartsWithoutAssembly = allAssetProjectParts.Where(a => !assemblyNames.Contains(a.Key));
-      projectParts.AddRange(projectPartsWithoutAssembly.Select(allAssetProjectPart =>
+      projectParts.AddRange(projectPartsWithoutAssembly.Select(allAssetProjectPart => 
+        AddProjectPart(allAssetProjectPart.Key, riderAssembly, allAssetProjectPart.Value)));
+
+      if (!projectParts.Any()) // just an empty project, when there are no files at all
       {
-        Assembly assembly = null;
-        if (riderAssembly != null)
-          // We want to add those references, so that Rider would detect Unity path and version and provide rich features for shader files
-          assembly = new Assembly(allAssetProjectPart.Key, riderAssembly.outputPath, new string[0], new string[0],
-            new Assembly[0],
-            riderAssembly.compiledAssemblyReferences.Where(a =>
-              a.EndsWith("UnityEditor.dll") || a.EndsWith("UnityEngine.dll") ||
-              a.EndsWith("UnityEngine.CoreModule.dll")).ToArray(), riderAssembly.flags);
-        return new ProjectPart(allAssetProjectPart.Key, assembly, allAssetProjectPart.Value);
-      }));
+        var assetProjectPart = $"     <Folder Include=\"Assets\"/>{Environment.NewLine}";
+        projectParts.Add(AddProjectPart("Assembly-CSharp", riderAssembly, assetProjectPart));
+      }
 
       SyncSolution(projectParts.ToArray(), types);
 
@@ -222,6 +219,20 @@ namespace Packages.Rider.Editor.ProjectGeneration
       {
         SyncProject(projectPart, types);
       }
+    }
+
+    private static ProjectPart AddProjectPart(string assemblyName, Assembly riderAssembly, string assetProjectPart)
+    {
+      Assembly assembly = null;
+      if (riderAssembly != null)
+        // We want to add those references, so that Rider would detect Unity path and version and provide rich features for shader files
+        assembly = new Assembly(assemblyName, riderAssembly.outputPath, Array.Empty<string>(),
+          new []{"UNITY_EDITOR"},
+          Array.Empty<Assembly>(),
+          riderAssembly.compiledAssemblyReferences.Where(a =>
+            a.EndsWith("UnityEditor.dll", StringComparison.Ordinal) || a.EndsWith("UnityEngine.dll", StringComparison.Ordinal) ||
+            a.EndsWith("UnityEngine.CoreModule.dll", StringComparison.Ordinal)).ToArray(), riderAssembly.flags);
+      return new ProjectPart(assemblyName, assembly, assetProjectPart);
     }
 
     private Dictionary<string, string> GenerateAllAssetProjectParts()
@@ -761,7 +772,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
                 return new KeyValuePair<string, string>(warnaserror, b.Substring(warnaserror.Length + 1));
               }
               const string nullable = "nullable";
-              if (b.Substring(1).StartsWith(nullable))
+              if (b.Substring(1).StartsWith(nullable, StringComparison.Ordinal))
               {
                 var res = b.Substring(nullable.Length + 1);
                 if (string.IsNullOrWhiteSpace(res) || res.Equals("+"))
@@ -818,7 +829,14 @@ namespace Packages.Rider.Editor.ProjectGeneration
 
     public static string GenerateNoWarn(List<string> codes)
     {
-#if UNITY_2020_1_OR_NEWER
+#if UNITY_2020_1 // RIDER-77206 Unity 2020.1.3 'PlayerSettings' does not contain a definition for 'suppressCommonWarnings'
+      var type = typeof(PlayerSettings);
+      var propertyInfo = type.GetProperty("suppressCommonWarnings");
+      if (propertyInfo != null && propertyInfo.GetValue(null) is bool && (bool)propertyInfo.GetValue(null))
+      {
+        codes.AddRange(new[] {"0169", "0649"});  
+      }
+#elif UNITY_2020_2_OR_NEWER
       if (PlayerSettings.suppressCommonWarnings)
         codes.AddRange(new[] {"0169", "0649"});
 #endif

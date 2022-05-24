@@ -1,9 +1,11 @@
 # Code Editor Package for Rider
 
-## [3.0.14] - 2022-04-07
+## [3.0.15] - 2022-05-24
 
-- Move Rider package persisted state to Library, to avoid vcs collisions or adding it specifically to gitignore
-
+- Cleanup cache after project generation to reduce memory consumption
+- Performance optimization
+- RIDER-76126 Rider package should generate an empty csproj for empty Unity project
+- RIDER-77206 Unity 2020.1.3 'PlayerSettings' does not contain a definition for 'suppressCommonWarnings
 
 
 ## [3.0.10] - 2021-12-09
