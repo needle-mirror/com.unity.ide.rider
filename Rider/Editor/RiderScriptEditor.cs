@@ -260,6 +260,8 @@ namespace Packages.Rider.Editor
       if (prevEditorBuildNumber.ToVersion() != RiderScriptEditorData.instance.editorBuildNumber.ToVersion()) // in Unity 2019.3 any change in preference causes `Initialize` call
       {
         m_ProjectGeneration.Sync(); // regenerate csproj and sln for new editor
+        if (prevEditorBuildNumber == null) // avoid reloading at first start
+          return;
 #if UNITY_2019_3_OR_NEWER
         EditorUtility.RequestScriptReload(); // EditorPlugin would get loaded
 #else 

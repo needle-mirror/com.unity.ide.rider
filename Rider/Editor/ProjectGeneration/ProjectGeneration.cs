@@ -207,12 +207,6 @@ namespace Packages.Rider.Editor.ProjectGeneration
       projectParts.AddRange(projectPartsWithoutAssembly.Select(allAssetProjectPart => 
         AddProjectPart(allAssetProjectPart.Key, riderAssembly, allAssetProjectPart.Value)));
 
-      if (!projectParts.Any()) // just an empty project, when there are no files at all
-      {
-        var assetProjectPart = $"     <Folder Include=\"Assets\"/>{Environment.NewLine}";
-        projectParts.Add(AddProjectPart("Assembly-CSharp", riderAssembly, assetProjectPart));
-      }
-
       SyncSolution(projectParts.ToArray(), types);
 
       foreach (var projectPart in projectParts)
@@ -247,15 +241,36 @@ namespace Packages.Rider.Editor.ProjectGeneration
           continue;
         }
 
+        var fallbackAssemblyName = "Assembly-CSharp";
         var extension = Path.GetExtension(asset);
-        if (IsSupportedExtension(extension) && !extension.Equals(".cs", StringComparison.OrdinalIgnoreCase))
+        if (Directory.Exists(asset))
+        {
+          var assemblyName = m_AssemblyNameProvider.GetAssemblyNameFromScriptPath($"{asset}/asset.cs");
+
+          if (string.IsNullOrEmpty(assemblyName))
+          {
+            assemblyName = fallbackAssemblyName;
+          }
+
+          assemblyName = FileSystemUtil.FileNameWithoutExtension(assemblyName);
+
+          if (!stringBuilders.TryGetValue(assemblyName, out var projectBuilder))
+          {
+            projectBuilder = new StringBuilder();
+            stringBuilders[assemblyName] = projectBuilder;
+          }
+
+          projectBuilder.Append("     <Folder Include=\"").Append(m_FileIOProvider.EscapedRelativePathFor(asset, ProjectDirectory)).Append("\" />")
+            .Append(Environment.NewLine);
+        }
+        else if (IsSupportedExtension(extension) && !extension.Equals(".cs", StringComparison.OrdinalIgnoreCase))
         {
           // Find assembly the asset belongs to by adding script extension and using compilation pipeline.
           var assemblyName = m_AssemblyNameProvider.GetAssemblyNameFromScriptPath(asset + ".cs");
 
           if (string.IsNullOrEmpty(assemblyName))
           {
-            continue;
+            assemblyName = fallbackAssemblyName;
           }
 
           assemblyName = FileSystemUtil.FileNameWithoutExtension(assemblyName);
@@ -439,7 +454,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
 
       foreach (var reference in allReferences)
       {
-        var fullReference = Path.IsPathRooted(reference) ? reference : Path.Combine(ProjectDirectory, reference);
+        var fullReference = Path.IsPathRooted(reference) ? reference : Path.GetFullPath(reference);
         AppendReference(fullReference, projectBuilder);
       }
 
