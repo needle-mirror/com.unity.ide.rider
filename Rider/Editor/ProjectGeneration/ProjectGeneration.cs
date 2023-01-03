@@ -113,8 +113,6 @@ namespace Packages.Rider.Editor.ProjectGeneration
                                                                || (checkProjectFiles && LastWriteTracker.HasLastWriteTimeChanged()))
       {
         Sync();
-        RiderScriptEditorData.instance.hasChanges = false;
-        RiderScriptEditorData.instance.InvalidateSavedCompilationDefines();
         return true;
       }
 
@@ -147,6 +145,8 @@ namespace Packages.Rider.Editor.ProjectGeneration
       OnGeneratedCSProjectFiles(types);
       m_AssemblyNameProvider.ResetPackageInfoCache();
       m_AssemblyNameProvider.ResetAssembliesCache();
+      RiderScriptEditorData.instance.hasChanges = false;
+      RiderScriptEditorData.instance.InvalidateSavedCompilationDefines();
     }
 
     public bool HasSolutionBeenGenerated()
@@ -249,7 +249,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
 
         var fallbackAssemblyName = "Assembly-CSharp";
         var extension = Path.GetExtension(asset);
-        if (Directory.Exists(asset))
+        if (AssetDatabase.IsValidFolder(asset))
         {
           var assemblyName = m_AssemblyNameProvider.GetAssemblyNameFromScriptPath($"{asset}/asset.cs");
 
