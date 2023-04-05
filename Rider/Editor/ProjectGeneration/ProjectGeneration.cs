@@ -107,6 +107,8 @@ namespace Packages.Rider.Editor.ProjectGeneration
     public bool SyncIfNeeded(IEnumerable<string> affectedFiles, IEnumerable<string> reimportedFiles, bool checkProjectFiles = false)
     {
       SetupSupportedExtensions();
+      
+      PackageManagerTracker.SyncIfNeeded(checkProjectFiles);
 
       if (HasFilesBeenModified(affectedFiles, reimportedFiles) || RiderScriptEditorData.instance.hasChanges 
                                                                || RiderScriptEditorData.instance.HasChangesInCompilationDefines()
@@ -526,12 +528,13 @@ namespace Packages.Rider.Editor.ProjectGeneration
         assembly.CompilerOptions.AllowUnsafeCode | responseFilesData.Any(x => x.Unsafe),
         GenerateNoWarn(otherResponseFilesData["nowarn"].Distinct().ToList()),
         GenerateAnalyserItemGroup(RetrieveRoslynAnalyzers(assembly, otherResponseFilesData)),
-        GenerateAnalyserAdditionalFiles(otherResponseFilesData["additionalfile"].SelectMany(x=>x.Split(';')).Distinct().ToArray()),
+        GenerateAnalyserAdditionalFiles(RetrieveAdditionalFiles(assembly, otherResponseFilesData)),
         GenerateRoslynAnalyzerRulesetPath(assembly, otherResponseFilesData),
         GenerateWarningLevel(otherResponseFilesData["warn"].Concat(otherResponseFilesData["w"]).Distinct()),
         GenerateWarningAsError(otherResponseFilesData["warnaserror"], otherResponseFilesData["warnaserror-"], otherResponseFilesData["warnaserror+"]),
         GenerateDocumentationFile(otherResponseFilesData["doc"].ToArray()),
-        GenerateNullable(otherResponseFilesData["nullable"])
+        GenerateNullable(otherResponseFilesData["nullable"]),
+        GenerateGlobalAnalyzerConfigFiles(assembly)
       };
 
       try
@@ -544,6 +547,35 @@ namespace Packages.Rider.Editor.ProjectGeneration
           "Failed creating c# project because the c# project header did not have the correct amount of arguments, which is " +
           arguments.Length);
       }
+    }
+
+    private static string GenerateGlobalAnalyzerConfigFiles(ProjectPart assembly)
+    {
+      var configFile =
+#if UNITY_2021_3 || UNITY_2022_2_OR_NEWER
+        assembly.CompilerOptions.AnalyzerConfigPath; // https://docs.unity3d.com/2021.3/Documentation/ScriptReference/Compilation.ScriptCompilerOptions.AnalyzerConfigPath.html
+#else
+        string.Empty;
+#endif
+      
+      if (string.IsNullOrEmpty(configFile))
+        return string.Empty;
+      
+      var builder = new StringBuilder();
+      builder.AppendLine("  <ItemGroup>");
+      builder.AppendLine($"    <GlobalAnalyzerConfigFiles Include=\"{configFile}\" />");
+      builder.AppendLine("  </ItemGroup>");
+      return builder.ToString();
+    }
+
+    private static string[] RetrieveAdditionalFiles(ProjectPart assembly, ILookup<string, string> otherResponseFilesData)
+    {
+      return otherResponseFilesData["additionalfile"]
+        .SelectMany(x=>x.Split(';'))
+#if UNITY_2021_3 || UNITY_2022_2_OR_NEWER // https://docs.unity3d.com/2021.3/Documentation/ScriptReference/Compilation.ScriptCompilerOptions.RoslynAdditionalFilePaths.html
+        .Concat(assembly.CompilerOptions.RoslynAdditionalFilePaths)
+#endif        
+        .Distinct().ToArray();
     }
 
     string[] RetrieveRoslynAnalyzers(ProjectPart assembly, ILookup<string, string> otherResponseFilesData)
@@ -728,7 +760,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
 
       var footer = new[]
       {
-        @"{15}{16}  <ItemGroup>",
+        @"{15}{16}{22}  <ItemGroup>",
         @""
       };
 

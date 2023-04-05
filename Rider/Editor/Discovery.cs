@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using JetBrains.Annotations;
 using Microsoft.Win32;
 using Packages.Rider.Editor.Util;
@@ -28,7 +29,7 @@ namespace Packages.Rider.Editor
         .ToList();
 
       var editorPath = RiderScriptEditor.CurrentEditor;
-      if (RiderScriptEditor.IsRiderInstallation(editorPath) &&
+      if (RiderScriptEditor.IsRiderOrFleetInstallation(editorPath) &&
           !res.Any(a => a.Path == editorPath) &&
           FileSystemUtil.EditorPathExists(editorPath))
       {
@@ -80,55 +81,25 @@ namespace Packages.Rider.Editor
         Debug.LogException(e);
       }
 
-      return new RiderInfo[0];
+      return Array.Empty<RiderInfo>();
     }
 #endif
-
-#if RIDER_EDITOR_PLUGIN // can't be used in com.unity.ide.rider
-    internal static RiderInfo[] GetAllFoundInfos(OperatingSystemFamilyRider operatingSystemFamily)
-    {
-      try
-      {
-        switch (operatingSystemFamily)
-        {
-          case OperatingSystemFamilyRider.Windows:
-          {
-            return CollectRiderInfosWindows();
-          }
-          case OperatingSystemFamilyRider.MacOSX:
-          {
-            return CollectRiderInfosMac();
-          }
-          case OperatingSystemFamilyRider.Linux:
-          {
-            return CollectAllRiderPathsLinux();
-          }
-        }
-      }
-      catch (Exception e)
-      {
-        Debug.LogException(e);
-      }
-
-      return new RiderInfo[0];
-    }
-
-    internal static string[] GetAllFoundPaths(OperatingSystemFamilyRider operatingSystemFamily)
-    {
-      return GetAllFoundInfos(operatingSystemFamily).Select(a=>a.Path).ToArray();
-    }
-#endif
-
     private static RiderInfo[] CollectAllRiderPathsLinux()
     {
       var installInfos = new List<RiderInfo>();
-      var home = Environment.GetEnvironmentVariable("HOME");
-      if (!string.IsNullOrEmpty(home))
+      var appsPath = GetAppsRootPathInToolbox();
+      
+      var riderRootPath = Path.Combine(appsPath, "Rider");
+      installInfos.AddRange(CollectPathsFromToolbox(riderRootPath, "bin", "rider.sh", false)
+        .Select(a => new RiderInfo(a, true)).ToList());
+      
+      var fleetRootPath = Path.Combine(appsPath, "Fleet");
+      installInfos.AddRange(CollectPathsFromToolbox(fleetRootPath, "bin", "Fleet", false)
+        .Select(a => new RiderInfo(a, true)).ToList());
+      
+      var home = Environment.GetEnvironmentVariable("HOME"); 
+      if (!string.IsNullOrEmpty(home)) 
       {
-        var toolboxRiderRootPath = GetToolboxBaseDir();
-        installInfos.AddRange(CollectPathsFromToolbox(toolboxRiderRootPath, "bin", "rider.sh", false)
-          .Select(a => new RiderInfo(a, true)).ToList());
-
         //$Home/.local/share/applications/jetbrains-rider.desktop
         var shortcut = new FileInfo(Path.Combine(home, @".local/share/applications/jetbrains-rider.desktop"));
 
@@ -139,7 +110,7 @@ namespace Packages.Rider.Editor
           {
             if (!line.StartsWith("Exec=\""))
               continue;
-            var path = line.Split('"').Where((item, index) => index == 1).SingleOrDefault();
+            var path = line.Split('"').Where((_, index) => index == 1).SingleOrDefault();
             if (string.IsNullOrEmpty(path))
               continue;
 
@@ -170,21 +141,29 @@ namespace Packages.Rider.Editor
           .ToList());
       }
 
-      // /Users/user/Library/Application Support/JetBrains/Toolbox/apps/Rider/ch-1/181.3870.267/Rider EAP.app
-      var toolboxRiderRootPath = GetToolboxBaseDir();
-      var paths = CollectPathsFromToolbox(toolboxRiderRootPath, "", "Rider*.app", true)
-        .Select(a => new RiderInfo(a, true));
-      installInfos.AddRange(paths);
+      var appsPath = GetAppsRootPathInToolbox();
+      var riderRootPath = Path.Combine(appsPath, "Rider");
+      installInfos.AddRange(CollectPathsFromToolbox(riderRootPath, "", "Rider*.app", true)
+        .Select(a => new RiderInfo(a, true)));
+      
+      var fleetRootPath = Path.Combine(appsPath, "Fleet");
+      installInfos.AddRange(CollectPathsFromToolbox(fleetRootPath, "", "Fleet*.app", true)
+        .Select(a => new RiderInfo(a, true)));
 
       return installInfos.ToArray();
     }
 
     private static RiderInfo[] CollectRiderInfosWindows()
     {
+      var appsPath = GetAppsRootPathInToolbox();
       var installInfos = new List<RiderInfo>();
-      var toolboxRiderRootPath = GetToolboxBaseDir();
-      var installPathsToolbox = CollectPathsFromToolbox(toolboxRiderRootPath, "bin", "rider64.exe", false).ToList();
-      installInfos.AddRange(installPathsToolbox.Select(a => new RiderInfo(a, true)).ToList());
+      var riderRootPath = Path.Combine(appsPath, "Rider");
+      installInfos.AddRange(CollectPathsFromToolbox(riderRootPath, "bin", "rider64.exe", false).ToList()
+        .Select(a => new RiderInfo(a, true)).ToList());
+      
+      var fleetRootPath = Path.Combine(appsPath, "Fleet");
+      installInfos.AddRange(CollectPathsFromToolbox(fleetRootPath, string.Empty, "Fleet.exe", false).ToList()
+        .Select(a => new RiderInfo(a, true)).ToList());
       
       var installPaths = new List<string>();
       const string registryKey = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall";
@@ -197,14 +176,15 @@ namespace Packages.Rider.Editor
       return installInfos.ToArray();
     }
 
-    private static string GetToolboxBaseDir()
+    private static string GetAppsRootPathInToolbox()
     {
+      string localAppData = string.Empty;
       switch (SystemInfo.operatingSystemFamily)
       {
         case OperatingSystemFamily.Windows:
         {
-          var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-          return GetToolboxRiderRootPath(localAppData);
+          localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+          break;
         }
 
         case OperatingSystemFamily.MacOSX:
@@ -212,8 +192,7 @@ namespace Packages.Rider.Editor
           var home = Environment.GetEnvironmentVariable("HOME");
           if (!string.IsNullOrEmpty(home))
           {
-            var localAppData = Path.Combine(home, @"Library/Application Support");
-            return  GetToolboxRiderRootPath(localAppData);
+            localAppData = Path.Combine(home, @"Library/Application Support");
           }
           break;
         }
@@ -223,18 +202,14 @@ namespace Packages.Rider.Editor
           var home = Environment.GetEnvironmentVariable("HOME");
           if (!string.IsNullOrEmpty(home))
           {
-            var localAppData = Path.Combine(home, @".local/share");
-            return GetToolboxRiderRootPath(localAppData);
+            localAppData = Path.Combine(home, @".local/share");
           }
           break;
         }
+        default:
+          throw new Exception("Unknown OS");
       }
-      return string.Empty;
-    }
-    
-    
-    private static string GetToolboxRiderRootPath(string localAppData)
-    {
+      
       var toolboxPath = Path.Combine(localAppData, @"JetBrains/Toolbox");
       var settingsJson = Path.Combine(toolboxPath, ".settings.json");
 
@@ -245,10 +220,9 @@ namespace Packages.Rider.Editor
           toolboxPath = path;
       }
 
-      var toolboxRiderRootPath = Path.Combine(toolboxPath, @"apps/Rider");
-      return toolboxRiderRootPath;
+      return Path.Combine(toolboxPath, "apps");
     }
-    
+
     internal static ProductInfo GetBuildVersion(string path)
     {
       var buildTxtFileInfo = new FileInfo(Path.Combine(path, GetRelativePathToBuildTxt()));
@@ -264,7 +238,12 @@ namespace Packages.Rider.Editor
     
     internal static Version GetBuildNumber(string path)
     {
-      var file = new FileInfo(Path.Combine(path, GetRelativePathToBuildTxt()));
+      var buildTxtFileInfo = new FileInfo(Path.Combine(path, GetRelativePathToBuildTxt()));
+      return GetBuildNumberWithBuildTxt(buildTxtFileInfo) ?? GetBuildNumberFromPath(path);
+    }
+    
+    private static Version GetBuildNumberWithBuildTxt(FileInfo file)
+    {
       if (!file.Exists) 
         return null;
       var text = File.ReadAllText(file.FullName);
@@ -276,9 +255,26 @@ namespace Packages.Rider.Editor
       return Version.TryParse(versionText, out var v) ? v : null;
     }
 
-    internal static bool GetIsToolbox(string path)
+    [CanBeNull]
+    private static Version GetBuildNumberFromPath(string input)
     {
-      return Path.GetFullPath(path).StartsWith(Path.GetFullPath(GetToolboxBaseDir()));
+      if (string.IsNullOrEmpty(input))
+        return null;
+
+      var match = Regex.Match(input, @"(?<major>\d+)\.(?<minor>\d+)\.(?<build>\d+)");
+      var groups = match.Groups;
+      Version version = null;
+      if (match.Success)
+      {
+        version = Version.Parse($"{groups["major"].Value}.{groups["minor"].Value}.{groups["build"].Value}");
+      }
+
+      return version;
+    }
+
+    public static bool GetIsToolbox(string path)
+    {
+      return Path.GetFullPath(path).StartsWith(Path.GetFullPath(GetAppsRootPathInToolbox()));
     }
 
     private static string GetRelativePathToBuildTxt()
@@ -330,13 +326,13 @@ namespace Packages.Rider.Editor
       }
     }
 
-    private static string[] CollectPathsFromToolbox(string toolboxRiderRootPath, string dirName, string searchPattern,
+    private static string[] CollectPathsFromToolbox(string productRootPathInToolbox, string dirName, string searchPattern,
       bool isMac)
     {
-      if (!Directory.Exists(toolboxRiderRootPath))
+      if (!Directory.Exists(productRootPathInToolbox))
         return new string[0];
 
-      var channelDirs = Directory.GetDirectories(toolboxRiderRootPath);
+      var channelDirs = Directory.GetDirectories(productRootPathInToolbox);
       var paths = channelDirs.SelectMany(channelDir =>
         {
           try
@@ -370,14 +366,14 @@ namespace Packages.Rider.Editor
               }
             }
 
-            // changes in toolbox json files format may brake the logic above, so return all found Rider installations
+            // changes in toolbox json files format may brake the logic above, so return all found installations
             return Directory.GetDirectories(channelDir)
               .SelectMany(buildDir => GetExecutablePaths(dirName, searchPattern, isMac, buildDir));
           }
           catch (Exception e)
           {
             // do not write to Debug.Log, just log it.
-            Logger.Warn($"Failed to get RiderPath from {channelDir}", e);
+            Logger.Warn($"Failed to get path from {channelDir}", e);
           }
 
           return new string[0];
@@ -549,13 +545,16 @@ namespace Packages.Rider.Editor
           BuildNumber = GetBuildNumber(path);
           ProductInfo = GetBuildVersion(path);
         }
-        Path = new FileInfo(path).FullName; // normalize separators
-        var presentation = $"Rider {BuildNumber}";
+
+        var fileInfo = new FileInfo(path);
+        var productName = RiderScriptEditor.GetProductNameForPresentation(fileInfo);  
+        Path = fileInfo.FullName; // normalize separators
+        var presentation = $"{productName} {BuildNumber}";
 
         if (ProductInfo != null && !string.IsNullOrEmpty(ProductInfo.version))
         {
           var suffix = string.IsNullOrEmpty(ProductInfo.versionSuffix) ? "" : $" {ProductInfo.versionSuffix}";
-          presentation = $"Rider {ProductInfo.version}{suffix}";
+          presentation = $"{productName} {ProductInfo.version}{suffix}";
         }
 
         if (isToolbox)

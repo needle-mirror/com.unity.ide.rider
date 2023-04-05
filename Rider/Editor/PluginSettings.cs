@@ -26,7 +26,7 @@ namespace Packages.Rider.Editor
     [SettingsProvider]
     private static SettingsProvider RiderPreferencesItem()
     {
-      if (!RiderScriptEditor.IsRiderInstallation(RiderScriptEditor.CurrentEditor))
+      if (!RiderScriptEditor.IsRiderOrFleetInstallation(RiderScriptEditor.CurrentEditor))
         return null;
       if (!RiderScriptEditorData.instance.shouldLoadEditorPlugin)
         return null;

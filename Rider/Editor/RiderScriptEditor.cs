@@ -18,6 +18,7 @@ namespace Packages.Rider.Editor
     IDiscovery m_Discoverability;
     static IGenerator m_ProjectGeneration;
     RiderInitializer m_Initiliazer = new RiderInitializer();
+    static RiderScriptEditor m_RiderScriptEditor;
 
     static RiderScriptEditor()
     {
@@ -25,75 +26,10 @@ namespace Packages.Rider.Editor
       {
         // todo: make ProjectGeneration lazy
         var projectGeneration = new ProjectGeneration.ProjectGeneration();
-        var editor = new RiderScriptEditor(new Discovery(), projectGeneration);
-        CodeEditor.Register(editor);
-        var path = GetEditorRealPath(CurrentEditor);
+        m_RiderScriptEditor = new RiderScriptEditor(new Discovery(), projectGeneration);
+        CodeEditor.Register(m_RiderScriptEditor);
 
-        if (IsRiderInstallation(path))
-        {
-          RiderPathLocator.RiderInfo[] installations = null;
-
-          if (!RiderScriptEditorData.instance.initializedOnce)
-          {
-            installations = RiderPathLocator.GetAllRiderPaths().OrderBy(a => a.BuildNumber).ToArray();
-            // is likely outdated
-            if (installations.Any() && installations.All(a => GetEditorRealPath(a.Path) != path))
-            {
-              if (RiderPathLocator.GetIsToolbox(path)) // is toolbox - update
-              {
-                var toolboxInstallations = installations.Where(a => a.IsToolbox).ToArray();
-                if (toolboxInstallations.Any())
-                {
-                  var newEditor = toolboxInstallations.Last().Path;
-                  CodeEditor.SetExternalScriptEditor(newEditor);
-                  path = newEditor;
-                }
-                else
-                {
-                  var newEditor = installations.Last().Path;
-                  CodeEditor.SetExternalScriptEditor(newEditor);
-                  path = newEditor;
-                }
-              }
-              else // is non toolbox - notify
-              {
-                var newEditorName = installations.Last().Presentation;
-                Debug.LogWarning($"Consider updating External Editor in Unity to {newEditorName}.");
-              }
-            }
-
-            ShowWarningOnUnexpectedScriptEditor(path);
-            RiderScriptEditorData.instance.initializedOnce = true;
-          }
-
-          if (!FileSystemUtil.EditorPathExists(path)) // previously used rider was removed
-          {
-            if (installations == null)
-              installations = RiderPathLocator.GetAllRiderPaths().OrderBy(a => a.BuildNumber).ToArray();
-            if (installations.Any())
-            {
-              var newEditor = installations.Last().Path;
-              CodeEditor.SetExternalScriptEditor(newEditor);
-              path = newEditor;
-            }
-          }
-
-          RiderScriptEditorData.instance.Init();
-
-          editor.CreateSolutionIfDoesntExist();
-          if (RiderScriptEditorData.instance.shouldLoadEditorPlugin)
-          {
-            editor.m_Initiliazer.Initialize(path);
-          }
-
-          // can't switch to non-deprecated api, because UnityEditor.Build.BuildPipelineInterfaces.processors is internal
-#pragma warning disable 618
-          EditorUserBuildSettings.activeBuildTargetChanged += () =>
-#pragma warning restore 618
-          {
-            RiderScriptEditorData.instance.hasChanges = true;
-          };
-        }
+        InitializeInternal(CurrentEditor);
       }
       catch (Exception e)
       {
@@ -168,20 +104,18 @@ namespace Packages.Rider.Editor
 
     public void OnGUI()
     {
-      if (RiderScriptEditorData.instance.shouldLoadEditorPlugin)
-      {
-        GUILayout.BeginHorizontal();
-        
-        var style = GUI.skin.label;
-        var text = "Customize handled extensions in";
-        EditorGUILayout.LabelField(text, style, GUILayout.Width(style.CalcSize(new GUIContent(text)).x));
+      GUILayout.BeginHorizontal();
 
-        if (PluginSettings.LinkButton("Project Settings | Editor | Additional extensions to include"))
-        {
-          SettingsService.OpenProjectSettings("Project/Editor"); // how do I focus "Additional extensions to include"?
-        }
-        GUILayout.EndHorizontal();
+      var style = GUI.skin.label;
+      var text = "Customize handled extensions in";
+      EditorGUILayout.LabelField(text, style, GUILayout.Width(style.CalcSize(new GUIContent(text)).x));
+
+      if (PluginSettings.LinkButton("Project Settings | Editor | Additional extensions to include"))
+      {
+        SettingsService.OpenProjectSettings("Project/Editor"); // how do I focus "Additional extensions to include"?
       }
+
+      GUILayout.EndHorizontal();
 
       EditorGUILayout.LabelField("Generate .csproj files for:");
       EditorGUI.indentLevel++;
@@ -257,17 +191,93 @@ namespace Packages.Rider.Editor
       var prevEditorBuildNumber = RiderScriptEditorData.instance.prevEditorBuildNumber;
       
       RiderScriptEditorData.instance.Invalidate(editorInstallationPath, true);
+
+      if (EditorPluginInterop.EditorPluginAssembly == null) // no need to reload all - just load the EditorPlugin
+      {
+        InitializeInternal(editorInstallationPath);
+        return;
+      }
+      
       if (prevEditorBuildNumber.ToVersion() != RiderScriptEditorData.instance.editorBuildNumber.ToVersion()) // in Unity 2019.3 any change in preference causes `Initialize` call
       {
         m_ProjectGeneration.Sync(); // regenerate csproj and sln for new editor
-        if (prevEditorBuildNumber == null) // avoid reloading at first start
-          return;
 #if UNITY_2019_3_OR_NEWER
         EditorUtility.RequestScriptReload(); // EditorPlugin would get loaded
 #else 
         UnityEditorInternal.InternalEditorUtility.RequestScriptReload();
 #endif
         
+      }
+    }
+
+    private static void InitializeInternal(string currentEditorPath)
+    {
+      var path = GetEditorRealPath(currentEditorPath);
+
+      if (IsRiderOrFleetInstallation(path))
+      {
+        RiderPathLocator.RiderInfo[] installations = null;
+
+        if (!RiderScriptEditorData.instance.initializedOnce)
+        {
+          installations = RiderPathLocator.GetAllRiderPaths().OrderBy(a => a.BuildNumber).ToArray();
+          // is likely outdated
+          if (installations.Any() && installations.All(a => GetEditorRealPath(a.Path) != path))
+          {
+            if (RiderPathLocator.GetIsToolbox(path)) // is toolbox - update
+            {
+              var toolboxInstallations = installations.Where(a => a.IsToolbox).ToArray();
+              if (toolboxInstallations.Any())
+              {
+                var newEditor = toolboxInstallations.Last().Path;
+                CodeEditor.SetExternalScriptEditor(newEditor);
+                path = newEditor;
+              }
+              else
+              {
+                var newEditor = installations.Last().Path;
+                CodeEditor.SetExternalScriptEditor(newEditor);
+                path = newEditor;
+              }
+            }
+            else // is non toolbox - notify
+            {
+              var newEditorName = installations.Last().Presentation;
+              Debug.LogWarning($"Consider updating External Editor in Unity to {newEditorName}.");
+            }
+          }
+
+          ShowWarningOnUnexpectedScriptEditor(path);
+          RiderScriptEditorData.instance.initializedOnce = true;
+        }
+
+        if (!FileSystemUtil.EditorPathExists(path)) // previously used rider was removed
+        {
+          if (installations == null)
+            installations = RiderPathLocator.GetAllRiderPaths().OrderBy(a => a.BuildNumber).ToArray();
+          if (installations.Any())
+          {
+            var newEditor = installations.Last().Path;
+            CodeEditor.SetExternalScriptEditor(newEditor);
+            path = newEditor;
+          }
+        }
+
+        RiderScriptEditorData.instance.Init();
+
+        m_RiderScriptEditor.CreateSolutionIfDoesntExist();
+        if (RiderScriptEditorData.instance.shouldLoadEditorPlugin)
+        {
+          m_RiderScriptEditor.m_Initiliazer.Initialize(path);
+        }
+
+        // can't switch to non-deprecated api, because UnityEditor.Build.BuildPipelineInterfaces.processors is internal
+#pragma warning disable 618
+        EditorUserBuildSettings.activeBuildTargetChanged += () =>
+#pragma warning restore 618
+        {
+          RiderScriptEditorData.instance.hasChanges = true;
+        };
       }
     }
 
@@ -288,12 +298,14 @@ namespace Packages.Rider.Editor
           return true;
       }
 
+      var solution = GetSolutionFile(path); // TODO: If solution file doesn't exist resync.
+      if (ExecutableStartsWith(CodeEditor.CurrentEditorInstallation, "fleet")) // I hope fleet would provide a way to specify the sln
+        solution = new FileInfo(solution).Directory.FullName;
       if (SystemInfo.operatingSystemFamily == OperatingSystemFamily.MacOSX)
       {
-        return OpenOSXApp(path, line, column);
+        return OpenOSXApp(solution, path, line, column);
       }
 
-      var solution = GetSolutionFile(path); // TODO: If solution file doesn't exist resync.
       solution = solution == "" ? "" : $"\"{solution}\"";
       var process = new Process
       {
@@ -310,9 +322,8 @@ namespace Packages.Rider.Editor
       return true;
     }
 
-    private bool OpenOSXApp(string path, int line, int column)
+    private bool OpenOSXApp(string solution, string path, int line, int column)
     {
-      var solution = GetSolutionFile(path);
       solution = solution == "" ? "" : $"\"{solution}\"";
       var pathArguments = path == "" ? "" : $"-l {line} \"{path}\"";
       var process = new Process
@@ -371,9 +382,9 @@ namespace Packages.Rider.Editor
 
     public bool TryGetInstallationForPath(string editorPath, out CodeEditor.Installation installation)
     {
-      if (FileSystemUtil.EditorPathExists(editorPath) && IsRiderInstallation(editorPath))
+      if (FileSystemUtil.EditorPathExists(editorPath) && IsRiderOrFleetInstallation(editorPath))
       {
-        var info = new RiderPathLocator.RiderInfo(editorPath, false);
+        var info = new RiderPathLocator.RiderInfo(editorPath, RiderPathLocator.GetIsToolbox(editorPath));
         installation = new CodeEditor.Installation
         {
           Name = info.Presentation,
@@ -386,7 +397,7 @@ namespace Packages.Rider.Editor
       return false;
     }
 
-    public static bool IsRiderInstallation(string path)
+    public static bool IsRiderOrFleetInstallation(string path)
     {
       if (IsAssetImportWorkerProcess())
         return false;
@@ -405,9 +416,24 @@ namespace Packages.Rider.Editor
       if (string.IsNullOrEmpty(path))
         return false;
 
+      return ExecutableStartsWith(path, "rider") || ExecutableStartsWith(path, "fleet");
+    }
+
+    public static bool ExecutableStartsWith(string path, string input)
+    {
       var fileInfo = new FileInfo(path);
-      var filename = fileInfo.Name.ToLowerInvariant();
-      return filename.StartsWith("rider", StringComparison.Ordinal);
+      var filename = fileInfo.Name;
+      return filename.StartsWith(input, StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static string GetProductNameForPresentation(FileInfo path)
+    {
+      var filename = path.Name;
+      if (filename.StartsWith("rider", StringComparison.OrdinalIgnoreCase))
+        return "Rider";
+      if (filename.StartsWith("fleet", StringComparison.OrdinalIgnoreCase))
+        return "Fleet";
+      return filename;
     }
 
     private static bool IsAssetImportWorkerProcess()

@@ -8,7 +8,7 @@ namespace Packages.Rider.Editor.PostProcessors
     public static bool OnPreGeneratingCSProjectFiles()
     {
       var path = RiderScriptEditor.GetEditorRealPath(CodeEditor.CurrentEditorInstallation);
-      if (RiderScriptEditor.IsRiderInstallation(path))
+      if (RiderScriptEditor.IsRiderOrFleetInstallation(path))
         return !ProjectGeneration.ProjectGeneration.isRiderProjectGeneration;
       return false;
     }

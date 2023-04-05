@@ -1,10 +1,8 @@
 # Code Editor Package for Rider
 
-## [3.0.18] - 2023-01-03
+## [3.0.20] - 2023-04-05
 
-- fixes RIDER-74818 Unity doesn't get to play mode if Editor is not running and user starts debug or profiling
-- Improve performance of project generation - avoid using Directory.Exists
-- avoid doing ProjectGeneration twice on the first start-up
+- fix loading Rider integration EditorPlugin on first switch of External Editor to Rider, see [RIDER-91185](https://youtrack.jetbrains.com/issue/RIDER-91185)
 
 
 ## [3.0.17] - 2022-12-01

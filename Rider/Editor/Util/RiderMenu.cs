@@ -17,7 +17,7 @@ namespace JetBrains.Rider.Unity.Editor
     [UsedImplicitly]
     public static void MenuOpenProject()
     {
-      if (RiderScriptEditor.IsRiderInstallation(RiderScriptEditor.CurrentEditor))
+      if (RiderScriptEditor.IsRiderOrFleetInstallation(RiderScriptEditor.CurrentEditor))
       {
         // Force the project files to be sync
         CodeEditor.CurrentEditor.SyncAll();

@@ -11,7 +11,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
     {
       if (!IsUnityCompatible()) return false;
 
-      // any external changes of sln/csproj or manifest.json should cause their regeneration
+      // any external changes of sln/csproj should cause their regeneration
       // Directory.GetCurrentDirectory(), "*.csproj", "*.sln"
       var files = new List<FileInfo>();
 
@@ -38,7 +38,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
       }
     }
 
-    private static bool IsUnityCompatible()
+    internal static bool IsUnityCompatible()
     {
 #if UNITY_2020_1_OR_NEWER
       return true;

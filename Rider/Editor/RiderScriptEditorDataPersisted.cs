@@ -10,6 +10,7 @@ namespace Packages.Rider.Editor
   internal class RiderScriptEditorPersistedState : ScriptableSingleton<RiderScriptEditorPersistedState>
   {
     [SerializeField] private long lastWriteTicks;
+    [SerializeField] private long manifestJsonLastWriteTicks;
 
     public DateTime? LastWrite
     {
@@ -18,6 +19,17 @@ namespace Packages.Rider.Editor
       {
         if (!value.HasValue) return;
         lastWriteTicks = value.Value.ToBinary();
+        Save(true);
+      }
+    }
+    
+    public DateTime? ManifestJsonLastWrite
+    {
+      get => DateTime.FromBinary(manifestJsonLastWriteTicks);
+      set
+      {
+        if (!value.HasValue) return;
+        manifestJsonLastWriteTicks = value.Value.ToBinary();
         Save(true);
       }
     }
