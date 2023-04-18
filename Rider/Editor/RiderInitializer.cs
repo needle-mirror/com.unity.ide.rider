@@ -19,6 +19,11 @@ namespace Packages.Rider.Editor
           return;
         }
         
+        if (assembly != null) // already loaded RIDER-92419
+        {
+          return;
+        }
+        
         // for debugging rider editor plugin
         if (RiderPathUtil.IsRiderDevEditor(editorPath))
         {

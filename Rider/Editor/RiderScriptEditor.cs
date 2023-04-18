@@ -186,7 +186,12 @@ namespace Packages.Rider.Editor
       CodeEditor.CurrentEditor.OpenProject();
     }
 
-    public void Initialize(string editorInstallationPath) // is called each time ExternalEditor is changed
+    /// <summary>
+    /// In 2020.x is called each time ExternalEditor is changed
+    /// In 2021.x+ is called each time ExternalEditor is changed and also on each appdomain reload
+    /// </summary>
+    /// <param name="editorInstallationPath"></param>
+    public void Initialize(string editorInstallationPath)
     {
       var prevEditorBuildNumber = RiderScriptEditorData.instance.prevEditorBuildNumber;
       

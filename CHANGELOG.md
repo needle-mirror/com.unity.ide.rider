@@ -1,8 +1,9 @@
 # Code Editor Package for Rider
 
-## [3.0.20] - 2023-04-05
+## [3.0.21] - 2023-04-18
 
-- fix loading Rider integration EditorPlugin on first switch of External Editor to Rider, see [RIDER-91185](https://youtrack.jetbrains.com/issue/RIDER-91185)
+[RIDER-92424](https://youtrack.jetbrains.com/issue/RIDER-92424) JetBrains Rider Editor 3.0.20 package Update for Unity, Cause's Rider to Slows to a Crawl after updating
+[RIDER-92419](https://youtrack.jetbrains.com/issue/RIDER-92419) JetBrains Rider Editor 3.0.20 for Unity has duplicate assemblies loaded into runtime
 
 
 ## [3.0.17] - 2022-12-01
