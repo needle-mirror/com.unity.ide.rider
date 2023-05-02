@@ -1,9 +1,28 @@
 # Code Editor Package for Rider
 
+## [3.0.22] - 2023-05-02
+
+ - [RIDER-82999](https://youtrack.jetbrains.com/issue/RIDER-82999) Unity's plugin `SyncAll` does not regenerate project files, and instead does basically nothing.
+- [#2401](https://github.com/JetBrains/resharper-unity/issues/2401) Compilation issue with Unity 2021.3.0f1
+
+
 ## [3.0.21] - 2023-04-18
 
 [RIDER-92424](https://youtrack.jetbrains.com/issue/RIDER-92424) JetBrains Rider Editor 3.0.20 package Update for Unity, Cause's Rider to Slows to a Crawl after updating
 [RIDER-92419](https://youtrack.jetbrains.com/issue/RIDER-92419) JetBrains Rider Editor 3.0.20 for Unity has duplicate assemblies loaded into runtime
+
+## [3.0.20] - 2023-04-05
+
+- fix loading Rider integration EditorPlugin on first switch of External Editor to Rider, see [RIDER-91185](https://youtrack.jetbrains.com/issue/RIDER-91185)
+- Keep the the PackageManager in sync with the Rider changes made to the manifest.json, it should help with [RIDER-77343](https://youtrack.jetbrains.com/issue/RIDER-77343)
+- Support CompilerOptions.RoslynAdditionalFilePaths and CompilerOptions.AnalyzerConfigPath
+
+
+## [3.0.18] - 2023-01-09
+
+- [RIDER-74818](https://youtrack.jetbrains.com/issue/RIDER-74818) Unity doesn't get to play mode if Editor is not running and user starts debug or profiling
+- Improve performance of project generation - avoid using Directory.Exists
+- avoid doing ProjectGeneration twice on the first start-up
 
 
 ## [3.0.17] - 2022-12-01

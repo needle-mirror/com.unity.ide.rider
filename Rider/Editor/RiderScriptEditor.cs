@@ -162,8 +162,7 @@ namespace Packages.Rider.Editor
     
     public void SyncAll()
     {
-      AssetDatabase.Refresh();
-      m_ProjectGeneration.SyncIfNeeded(new string[] { }, new string[] { });
+      m_ProjectGeneration.Sync();
     }
     
     [UsedImplicitly]

@@ -551,11 +551,16 @@ namespace Packages.Rider.Editor.ProjectGeneration
 
     private static string GenerateGlobalAnalyzerConfigFiles(ProjectPart assembly)
     {
-      var configFile =
-#if UNITY_2021_3 || UNITY_2022_2_OR_NEWER
-        assembly.CompilerOptions.AnalyzerConfigPath; // https://docs.unity3d.com/2021.3/Documentation/ScriptReference/Compilation.ScriptCompilerOptions.AnalyzerConfigPath.html
-#else
-        string.Empty;
+      var configFile = string.Empty;
+#if UNITY_2021_3 // https://github.com/JetBrains/resharper-unity/issues/2401
+      var type = assembly.CompilerOptions.GetType();
+      var propertyInfo = type.GetProperty("AnalyzerConfigPath");
+      if (propertyInfo != null && propertyInfo.GetValue(assembly.CompilerOptions) is string value)
+      {
+        configFile = value;
+      }
+#elif UNITY_2022_2_OR_NEWER
+        configFile = assembly.CompilerOptions.AnalyzerConfigPath; // https://docs.unity3d.com/2021.3/Documentation/ScriptReference/Compilation.ScriptCompilerOptions.AnalyzerConfigPath.html
 #endif
       
       if (string.IsNullOrEmpty(configFile))
@@ -570,11 +575,20 @@ namespace Packages.Rider.Editor.ProjectGeneration
 
     private static string[] RetrieveAdditionalFiles(ProjectPart assembly, ILookup<string, string> otherResponseFilesData)
     {
+      var additionalFilePathsFromCompilationPipeline = Array.Empty<string>();
+#if UNITY_2021_3 // https://github.com/JetBrains/resharper-unity/issues/2401
+      var type = assembly.CompilerOptions.GetType();
+      var propertyInfo = type.GetProperty("RoslynAdditionalFilePaths");
+      if (propertyInfo != null && propertyInfo.GetValue(assembly.CompilerOptions) is string[] value)
+      {
+        additionalFilePathsFromCompilationPipeline = value;
+      }
+#elif UNITY_2022_2_OR_NEWER // https://docs.unity3d.com/2021.3/Documentation/ScriptReference/Compilation.ScriptCompilerOptions.RoslynAdditionalFilePaths.html
+        additionalFilePathsFromCompilationPipeline = assembly.CompilerOptions.RoslynAdditionalFilePaths;
+#endif
       return otherResponseFilesData["additionalfile"]
         .SelectMany(x=>x.Split(';'))
-#if UNITY_2021_3 || UNITY_2022_2_OR_NEWER // https://docs.unity3d.com/2021.3/Documentation/ScriptReference/Compilation.ScriptCompilerOptions.RoslynAdditionalFilePaths.html
-        .Concat(assembly.CompilerOptions.RoslynAdditionalFilePaths)
-#endif        
+        .Concat(additionalFilePathsFromCompilationPipeline)
         .Distinct().ToArray();
     }
 
