@@ -89,6 +89,9 @@ namespace Packages.Rider.Editor
       var installInfos = new List<RiderInfo>();
       var appsPath = GetAppsRootPathInToolbox();
       
+      installInfos.AddRange(CollectToolbox20Linux(appsPath, "*rider*", "bin/rider.sh"));
+      installInfos.AddRange(CollectToolbox20Linux(appsPath, "*fleet*", "bin/Fleet"));
+
       var riderRootPath = Path.Combine(appsPath, "Rider");
       installInfos.AddRange(CollectPathsFromToolbox(riderRootPath, "bin", "rider.sh", false)
         .Select(a => new RiderInfo(a, true)).ToList());
@@ -129,17 +132,23 @@ namespace Packages.Rider.Editor
       return installInfos.ToArray();
     }
 
+    private static IEnumerable<RiderInfo> CollectToolbox20Linux(string appsPath, string pattern, string relPath)
+    {
+      var result = new List<RiderInfo>();
+      if (string.IsNullOrEmpty(appsPath) || !Directory.Exists(appsPath))
+        return result;
+      
+      CollectToolbox20(appsPath, pattern, relPath, result);
+      
+      return result;
+    }
+
     private static RiderInfo[] CollectRiderInfosMac()
     {
       var installInfos = new List<RiderInfo>();
-      // "/Applications/*Rider*.app"
-      var folder = new DirectoryInfo("/Applications");
-      if (folder.Exists)
-      {
-        installInfos.AddRange(folder.GetDirectories("*Rider*.app")
-          .Select(a => new RiderInfo(a.FullName, false))
-          .ToList());
-      }
+
+      installInfos.AddRange(CollectFromApplications("*Rider*.app"));
+      installInfos.AddRange(CollectFromApplications("*Fleet*.app"));
 
       var appsPath = GetAppsRootPathInToolbox();
       var riderRootPath = Path.Combine(appsPath, "Rider");
@@ -153,10 +162,40 @@ namespace Packages.Rider.Editor
       return installInfos.ToArray();
     }
 
+    private static RiderInfo[] CollectFromApplications(string productMask)
+    {
+      var result = new List<RiderInfo>();
+      var folder = new DirectoryInfo("/Applications");
+      if (folder.Exists)
+      {
+        result.AddRange(folder.GetDirectories(productMask)
+          .Select(a => new RiderInfo(a.FullName, false))
+          .ToList());
+      }
+
+      var home = Environment.GetEnvironmentVariable("HOME");
+      if (!string.IsNullOrEmpty(home))
+      {
+        var userFolder = new DirectoryInfo(Path.Combine(home, "Applications"));
+        if (userFolder.Exists)
+        {
+          result.AddRange(userFolder.GetDirectories(productMask)
+            .Select(a => new RiderInfo(a.FullName, false))
+            .ToList());
+        }
+      }
+      
+      return result.ToArray();
+    }
+
     private static RiderInfo[] CollectRiderInfosWindows()
     {
-      var appsPath = GetAppsRootPathInToolbox();
       var installInfos = new List<RiderInfo>();
+
+      installInfos.AddRange(CollectToolbox20Windows("*Rider*", "bin/rider64.exe"));
+      installInfos.AddRange(CollectToolbox20Windows("*Fleet*", "Fleet.exe"));
+
+      var appsPath = GetAppsRootPathInToolbox();
       var riderRootPath = Path.Combine(appsPath, "Rider");
       installInfos.AddRange(CollectPathsFromToolbox(riderRootPath, "bin", "rider64.exe", false).ToList()
         .Select(a => new RiderInfo(a, true)).ToList());
@@ -174,6 +213,35 @@ namespace Packages.Rider.Editor
       installInfos.AddRange(installPaths.Select(a => new RiderInfo(a, false)).ToList());
 
       return installInfos.ToArray();
+    }
+
+    private static IEnumerable<RiderInfo> CollectToolbox20Windows(string pattern, string relPath)
+    {
+      var result = new List<RiderInfo>();
+      var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+      if (!string.IsNullOrEmpty(localAppData))
+      {
+        CollectToolbox20(Path.Combine(localAppData, "Programs"), pattern, relPath, result);
+      }
+
+      return result;
+    }
+
+    private static void CollectToolbox20(string dir, string pattern, string relPath, List<RiderInfo> result)
+    {
+      var directoryInfo = new DirectoryInfo(dir);
+      if (!directoryInfo.Exists)
+        return;
+      
+      foreach (var riderDirectory in directoryInfo.GetDirectories(pattern))
+      {
+        var executable = Path.Combine(riderDirectory.FullName, relPath);
+       
+        if (File.Exists(executable))
+        {
+          result.Add(new RiderInfo(executable, false)); // false, because we can't check if it is Toolbox or not anyway
+        }
+      }
     }
 
     private static string GetAppsRootPathInToolbox()
@@ -314,14 +382,26 @@ namespace Packages.Rider.Editor
           if (folder.Length == 0) continue;
           var displayName = subkey.GetValue("DisplayName");
           if (displayName == null) continue;
-          if (!displayName.ToString().Contains("Rider")) continue;
-          try // possible "illegal characters in path"
+          if (displayName.ToString().Contains("Rider"))
           {
-            var possiblePath = Path.Combine(folder, @"bin\rider64.exe"); 
-            if (File.Exists(possiblePath))
-              installPaths.Add(possiblePath);
+            try // possible "illegal characters in path"
+            {
+              var possiblePath = Path.Combine(folder, @"bin\rider64.exe"); 
+              if (File.Exists(possiblePath))
+                installPaths.Add(possiblePath);
+            }
+            catch (ArgumentException) { }  
           }
-          catch (ArgumentException) { }
+          else if (displayName.ToString().Contains("Fleet"))
+          {
+            try // possible "illegal characters in path"
+            {
+              var possiblePath = Path.Combine(folder, @"Fleet.exe"); 
+              if (File.Exists(possiblePath))
+                installPaths.Add(possiblePath);
+            }
+            catch (ArgumentException) { }  
+          }
         }
       }
     }

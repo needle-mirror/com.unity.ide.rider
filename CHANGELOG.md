@@ -1,15 +1,23 @@
 # Code Editor Package for Rider
 
-## [3.0.22] - 2023-05-02
 
- - [RIDER-82999](https://youtrack.jetbrains.com/issue/RIDER-82999) Unity's plugin `SyncAll` does not regenerate project files, and instead does basically nothing.
-- [#2401](https://github.com/JetBrains/resharper-unity/issues/2401) Compilation issue with Unity 2021.3.0f1
+## [3.0.24] - 2023-06-09
+
+ - fix [RIDER-91705](https://youtrack.jetbrains.com/issue/RIDER-91705). Improve UnitTesting support
+ - support JetBrains Toolbox App 2.0
+
+
+## [3.0.22] - 2023-05-2
+
+- RIDER-82999 Unity's plugin SyncAll does not regenerate project files, and instead does basically nothing.
+- #2401 Compilation issue with Unity 2021.3.0f1
 
 
 ## [3.0.21] - 2023-04-18
 
 [RIDER-92424](https://youtrack.jetbrains.com/issue/RIDER-92424) JetBrains Rider Editor 3.0.20 package Update for Unity, Cause's Rider to Slows to a Crawl after updating
 [RIDER-92419](https://youtrack.jetbrains.com/issue/RIDER-92419) JetBrains Rider Editor 3.0.20 for Unity has duplicate assemblies loaded into runtime
+
 
 ## [3.0.20] - 2023-04-05
 
