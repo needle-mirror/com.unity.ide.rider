@@ -1,10 +1,9 @@
 # Code Editor Package for Rider
 
 
-## [3.0.24] - 2023-06-09
+## [3.0.25] - 2023-08-18
 
- - fix [RIDER-91705](https://youtrack.jetbrains.com/issue/RIDER-91705). Improve UnitTesting support
- - support JetBrains Toolbox App 2.0
+- unification of functionality to  search JetBrains installations and open solution and file in Rider
 
 
 ## [3.0.22] - 2023-05-2

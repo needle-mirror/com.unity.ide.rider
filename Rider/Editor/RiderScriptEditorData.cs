@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using JetBrains.Rider.PathLocator;
 using Packages.Rider.Editor.Util;
 using Rider.Editor.Util;
 using UnityEditor;
@@ -14,7 +15,7 @@ namespace Packages.Rider.Editor
     [SerializeField] internal bool initializedOnce;
     [SerializeField] internal SerializableVersion editorBuildNumber;
     [SerializeField] internal SerializableVersion prevEditorBuildNumber;
-    [SerializeField] internal RiderPathLocator.ProductInfo productInfo;
+    [SerializeField] internal RiderPathLocator.RiderInfo[] installations;
     [SerializeField] internal string[] activeScriptCompilationDefines;
 
     public void Init()
@@ -29,22 +30,22 @@ namespace Packages.Rider.Editor
     {
       activeScriptCompilationDefines = EditorUserBuildSettings.activeScriptCompilationDefines;
     }
-    
+
     public bool HasChangesInCompilationDefines()
     {
       if (activeScriptCompilationDefines == null)
         return false;
-      
+
       return !EditorUserBuildSettings.activeScriptCompilationDefines.SequenceEqual(activeScriptCompilationDefines);
     }
 
     public void Invalidate(string editorInstallationPath, bool shouldInvalidatePrevEditorBuildNumber = false)
     {
-      var riderBuildNumber = RiderPathLocator.GetBuildNumber(editorInstallationPath);
+      var riderBuildNumber = Discovery.RiderPathLocator.GetBuildNumber(editorInstallationPath);
       editorBuildNumber = riderBuildNumber.ToSerializableVersion();
       if (shouldInvalidatePrevEditorBuildNumber)
         prevEditorBuildNumber = editorBuildNumber;
-      productInfo = RiderPathLocator.GetBuildVersion(editorInstallationPath);
+      
       if (riderBuildNumber == null) // if we fail to parse for some reason
         shouldLoadEditorPlugin = true;
 
