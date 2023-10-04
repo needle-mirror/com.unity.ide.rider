@@ -219,11 +219,21 @@ namespace Packages.Rider.Editor
 
       if (IsRiderOrFleetInstallation(path))
       {
-        var installations = RiderScriptEditorData.instance.installations?.ToList() ??
-                            new List<RiderPathLocator.RiderInfo>();
+        var installations = new HashSet<RiderPathLocator.RiderInfo>();
+        if (RiderScriptEditorData.instance.installations != null)
+        {
+          foreach (var info in RiderScriptEditorData.instance.installations)
+          {
+            installations.Add(info);
+          }
+        }
+        
         if (!RiderScriptEditorData.instance.initializedOnce || !FileSystemUtil.EditorPathExists(path))
         {
-          installations.AddRange(Discovery.RiderPathLocator.GetAllRiderPaths());
+          foreach (var item in Discovery.RiderPathLocator.GetAllRiderPaths())
+          {
+            installations.Add(item);
+          }
           // is likely outdated
           if (installations.All(a => GetEditorRealPath(a.Path) != path))
           {
@@ -349,11 +359,18 @@ namespace Packages.Rider.Editor
 
     public bool TryGetInstallationForPath(string editorPath, out CodeEditor.Installation installation)
     {
+      installation = default;
+      if (string.IsNullOrEmpty(editorPath)) return false;
+
       if (FileSystemUtil.EditorPathExists(editorPath) && IsRiderOrFleetInstallation(editorPath))
       {
-        var installations = RiderScriptEditorData.instance.installations ?? Array.Empty<RiderPathLocator.RiderInfo>();
+        if (RiderScriptEditorData.instance.installations == null) // the case when other CodeEditor is set from the very Unity start
+        {
+          RiderScriptEditorData.instance.installations = Discovery.RiderPathLocator.GetAllRiderPaths();
+        }
+        
         var realPath = GetEditorRealPath(editorPath);
-        var editor = installations.SingleOrDefault(a => GetEditorRealPath(a.Path) == realPath);
+        var editor = RiderScriptEditorData.instance.installations.FirstOrDefault(a => GetEditorRealPath(a.Path) == realPath);
         if (editor.Path != null)
         {
           installation = new CodeEditor.Installation
@@ -366,7 +383,6 @@ namespace Packages.Rider.Editor
         }
       }
 
-      installation = default;
       return false;
     }
 
