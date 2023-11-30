@@ -10,7 +10,9 @@ namespace Packages.Rider.Editor
 {
   internal class RiderScriptEditorData : ScriptableSingleton<RiderScriptEditorData>
   {
-    [SerializeField] internal bool hasChanges = true; // activeBuildTargetChanged has changed
+    // activeBuildTargetChanged has changed
+    // making it true by default would cause multiple Sync projects on the startup
+    [SerializeField] internal bool hasChanges; 
     [SerializeField] internal bool shouldLoadEditorPlugin;
     [SerializeField] internal bool initializedOnce;
     [SerializeField] internal SerializableVersion editorBuildNumber;

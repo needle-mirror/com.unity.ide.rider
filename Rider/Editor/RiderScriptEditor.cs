@@ -29,8 +29,10 @@ namespace Packages.Rider.Editor
         // todo: make ProjectGeneration lazy
         var projectGeneration = new ProjectGeneration.ProjectGeneration();
         m_RiderScriptEditor = new RiderScriptEditor(new Discovery(), projectGeneration);
-        InitializeInternal(CurrentEditor);
+        // preserve the order here, otherwise on startup, project generation Sync would happen multiple times
         CodeEditor.Register(m_RiderScriptEditor);
+        InitializeInternal(CurrentEditor);
+        // end of "preserve the order here"
       }
       catch (Exception e)
       {
@@ -191,25 +193,27 @@ namespace Packages.Rider.Editor
     /// <param name="editorInstallationPath"></param>
     public void Initialize(string editorInstallationPath)
     {
-      var prevEditorBuildNumber = RiderScriptEditorData.instance.prevEditorBuildNumber;
+      var prevEditorVersion = RiderScriptEditorData.instance.prevEditorBuildNumber.ToVersion();
       
       RiderScriptEditorData.instance.Invalidate(editorInstallationPath, true);
 
-      if (EditorPluginInterop.EditorPluginAssembly == null) // no need to reload all - just load the EditorPlugin
+      // previous editor did not have EditorPlugin
+      // just load the EditorPlugin
+      if (EditorPluginInterop.EditorPluginAssembly == null) 
       {
         InitializeInternal(editorInstallationPath);
         return;
       }
       
-      if (prevEditorBuildNumber.ToVersion() != RiderScriptEditorData.instance.editorBuildNumber.ToVersion()) // in Unity 2019.3 any change in preference causes `Initialize` call
+      // previous editor was Rider with a different version
+      // need to load new Editor plugin
+      if (prevEditorVersion != null && prevEditorVersion != RiderScriptEditorData.instance.editorBuildNumber.ToVersion()) // in Unity 2019.3 any change in preference causes `Initialize` call
       {
-        m_ProjectGeneration.Sync(); // regenerate csproj and sln for new editor
 #if UNITY_2019_3_OR_NEWER
         EditorUtility.RequestScriptReload(); // EditorPlugin would get loaded
 #else 
         UnityEditorInternal.InternalEditorUtility.RequestScriptReload();
 #endif
-        
       }
     }
 
@@ -381,6 +385,14 @@ namespace Packages.Rider.Editor
 
           return true;
         }
+        
+        installation = new CodeEditor.Installation
+        {
+          Name = "Rider (custom location)",
+          Path = editorPath
+        };
+
+        return true;
       }
 
       return false;

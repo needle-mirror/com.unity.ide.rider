@@ -4,22 +4,24 @@ using System.Linq;
 using UnityEditor;
 using UnityEditor.Compilation;
 using UnityEditor.PackageManager;
+using PackageInfo = UnityEditor.PackageManager.PackageInfo;
 
 namespace Packages.Rider.Editor.ProjectGeneration
 {
   internal class AssemblyNameProvider : IAssemblyNameProvider
   {
-    private readonly Dictionary<string, UnityEditor.PackageManager.PackageInfo> m_PackageInfoCache = new Dictionary<string, UnityEditor.PackageManager.PackageInfo>();
+    private readonly Dictionary<string, PackageInfo> m_PackageInfoCache = new Dictionary<string, PackageInfo>();
+    private readonly Dictionary<string, ResponseFileData> m_ResponseFilesCache = new Dictionary<string, ResponseFileData>();
 
     ProjectGenerationFlag m_ProjectGenerationFlag = (ProjectGenerationFlag)EditorPrefs.GetInt("unity_project_generation_flag", 3);
 
     public string[] ProjectSupportedExtensions => EditorSettings.projectGenerationUserExtensions;
-    
+
     public string ProjectGenerationRootNamespace => EditorSettings.projectGenerationRootNamespace;
 
     private Assembly[] m_AllEditorAssemblies;
-    
     private Assembly[] m_AllPlayerAssemblies;
+    private Assembly[] m_AllAssemblies;
 
     public ProjectGenerationFlag ProjectGenerationFlag
     {
@@ -36,35 +38,71 @@ namespace Packages.Rider.Editor.ProjectGeneration
       return CompilationPipeline.GetAssemblyNameFromScriptPath(path);
     }
 
-    public IEnumerable<Assembly> GetAssemblies(Func<string, bool> shouldFileBePartOfSolution)
+    public Assembly[] GetAllAssemblies()
     {
       if (m_AllEditorAssemblies == null)
-        m_AllEditorAssemblies = GetAssembliesByType(AssembliesType.Editor).ToArray();
+      {
+        m_AllEditorAssemblies = GetAssembliesByType(AssembliesType.Editor);
+        m_AllAssemblies = m_AllEditorAssemblies;
+      }
 
       if (ProjectGenerationFlag.HasFlag(ProjectGenerationFlag.PlayerAssemblies))
       {
         if (m_AllPlayerAssemblies == null)
-          m_AllPlayerAssemblies = GetAssembliesByType(AssembliesType.Player).ToArray();
+        {
+          m_AllPlayerAssemblies = GetAssembliesByType(AssembliesType.Player);
+          m_AllAssemblies = new Assembly[m_AllEditorAssemblies.Length + m_AllPlayerAssemblies.Length];
+          Array.Copy(m_AllEditorAssemblies, m_AllAssemblies, m_AllEditorAssemblies.Length);
+          Array.Copy(m_AllPlayerAssemblies, 0, m_AllAssemblies, m_AllEditorAssemblies.Length, m_AllPlayerAssemblies.Length);
+        }
       }
-      
-      if (!ProjectGenerationFlag.HasFlag(ProjectGenerationFlag.PlayerAssemblies))
-        return m_AllEditorAssemblies.Where(a => a.sourceFiles.Any(shouldFileBePartOfSolution));
-      
-      return m_AllEditorAssemblies.Concat(m_AllPlayerAssemblies).Where(a => a.sourceFiles.Any(shouldFileBePartOfSolution));
+
+
+      return m_AllAssemblies;
     }
 
-    private static IEnumerable<Assembly> GetAssembliesByType(AssembliesType type)
+    private static Assembly[] GetAssembliesByType(AssembliesType type)
     {
-      foreach (var assembly in CompilationPipeline.GetAssemblies(type))
+      // This is a very expensive Unity call...
+      var compilationPipelineAssemblies = CompilationPipeline.GetAssemblies(type);
+      var assemblies = new Assembly[compilationPipelineAssemblies.Length];
+      var i = 0;
+      foreach (var compilationPipelineAssembly in compilationPipelineAssemblies)
       {
-        var outputPath = type == AssembliesType.Editor ? $@"Temp\Bin\Debug\{assembly.name}\" : $@"Temp\Bin\Debug\{assembly.name}\Player\";
-        yield return new Assembly(assembly.name, outputPath, assembly.sourceFiles, assembly.defines,
-          assembly.assemblyReferences, assembly.compiledAssemblyReferences, assembly.flags, assembly.compilerOptions
+        // The CompilationPipeline's assemblies have an output path of Libraries/ScriptAssemblies
+        // TODO: It might be worth using the app's copy of Assembly and updating output path when we need it
+        // But that requires tracking editor and player assemblies separately
+        var outputPath = type == AssembliesType.Editor
+          ? $@"Temp\Bin\Debug\{compilationPipelineAssembly.name}\"
+          : $@"Temp\Bin\Debug\{compilationPipelineAssembly.name}\Player\";
+        assemblies[i] = new Assembly(
+          compilationPipelineAssembly.name,
+          outputPath,
+          compilationPipelineAssembly.sourceFiles,
+          compilationPipelineAssembly.defines,
+          compilationPipelineAssembly.assemblyReferences,
+          compilationPipelineAssembly.compiledAssemblyReferences,
+          compilationPipelineAssembly.flags,
+          compilationPipelineAssembly.compilerOptions
 #if UNITY_2020_2_OR_NEWER
-          , assembly.rootNamespace
+          , compilationPipelineAssembly.rootNamespace
 #endif
         );
+        i++;
       }
+
+      return assemblies;
+    }
+
+    public Assembly GetNamedAssembly(string name)
+    {
+      foreach (var assembly in GetAllAssemblies())
+      {
+        if (assembly.name == name)
+          return assembly;
+      }
+
+      return null;
     }
 
     public string GetProjectName(string name, string[] defines)
@@ -79,7 +117,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
       return AssetDatabase.GetAllAssetPaths();
     }
 
-    private static string ResolvePotentialParentPackageAssetPath(string assetPath)
+    private static string GetPackageRootDirectoryName(string assetPath)
     {
       const string packagesPrefix = "packages/";
       if (!assetPath.StartsWith(packagesPrefix, StringComparison.OrdinalIgnoreCase))
@@ -88,51 +126,50 @@ namespace Packages.Rider.Editor.ProjectGeneration
       }
 
       var followupSeparator = assetPath.IndexOf('/', packagesPrefix.Length);
-      if (followupSeparator == -1)
-      {
-        return assetPath.ToLowerInvariant();
-      }
-
-      return assetPath.Substring(0, followupSeparator).ToLowerInvariant();
+      // Note that we return the first path segment without modifying/normalising case!
+      return followupSeparator == -1 ? assetPath : assetPath.Substring(0, followupSeparator);
     }
 
-    public UnityEditor.PackageManager.PackageInfo FindForAssetPath(string assetPath)
+    public PackageInfo GetPackageInfoForAssetPath(string assetPath)
     {
-      var parentPackageAssetPath = ResolvePotentialParentPackageAssetPath(assetPath);
-      if (parentPackageAssetPath == null)
+      var packageName = GetPackageRootDirectoryName(assetPath);
+      if (packageName == null)
       {
         return null;
       }
 
-      if (m_PackageInfoCache.TryGetValue(parentPackageAssetPath, out var cachedPackageInfo))
-      {
+      // Assume the package name casing is consistent. If it's not, we'll fall back to an uppercase variant that's
+      // saved in the same dictionary. This gives us cheaper case sensitive matching, with a fallback if our assumption
+      // is incorrect
+      if (m_PackageInfoCache.TryGetValue(packageName, out var cachedPackageInfo))
         return cachedPackageInfo;
-      }
 
-      var result = UnityEditor.PackageManager.PackageInfo.FindForAssetPath(parentPackageAssetPath);
-      m_PackageInfoCache[parentPackageAssetPath] = result;
+      var packageNameUpper = packageName.ToUpperInvariant();
+      if (m_PackageInfoCache.TryGetValue(packageNameUpper, out cachedPackageInfo))
+        return cachedPackageInfo;
+
+      var result = PackageInfo.FindForAssetPath(packageName);
+      m_PackageInfoCache[packageName] = result;
+      m_PackageInfoCache[packageNameUpper] = result;
       return result;
     }
 
-    public void ResetPackageInfoCache()
+    public void ResetCaches()
     {
       m_PackageInfoCache.Clear();
-    }
-
-    public void ResetAssembliesCache()
-    {
+      m_ResponseFilesCache.Clear();
       m_AllEditorAssemblies = null;
       m_AllPlayerAssemblies = null;
     }
 
     public bool IsInternalizedPackagePath(string path)
     {
-      if (string.IsNullOrEmpty(path.Trim()))
+      if (string.IsNullOrEmpty(path))
       {
         return false;
       }
 
-      var packageInfo = FindForAssetPath(path);
+      var packageInfo = GetPackageInfoForAssetPath(path);
       if (packageInfo == null)
       {
         return false;
@@ -162,13 +199,23 @@ namespace Packages.Rider.Editor.ProjectGeneration
       return false;
     }
 
-    public ResponseFileData ParseResponseFile(string responseFilePath, string projectDirectory, string[] systemReferenceDirectories)
+    public ResponseFileData ParseResponseFile(string responseFilePath, string projectDirectory,
+      ApiCompatibilityLevel apiCompatibilityLevel)
     {
-      return CompilationPipeline.ParseResponseFile(
-        responseFilePath,
-        projectDirectory,
-        systemReferenceDirectories
-      );
+      var key = responseFilePath + ":" + (int) apiCompatibilityLevel;
+      if (!m_ResponseFilesCache.TryGetValue(key, out var responseFileData))
+      {
+        var systemReferenceDirectories =
+          CompilationPipeline.GetSystemAssemblyDirectories(apiCompatibilityLevel);
+        responseFileData = CompilationPipeline.ParseResponseFile(
+          responseFilePath,
+          projectDirectory,
+          systemReferenceDirectories
+        );
+        m_ResponseFilesCache.Add(key, responseFileData);
+      }
+
+      return responseFileData;
     }
 
     public IEnumerable<string> GetRoslynAnalyzerPaths()
