@@ -948,7 +948,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
 
     public static IEnumerable<string> GetNoWarn(List<string> codes)
     {
-#if UNITY_2020_1 // RIDER-77206 Unity 2020.1.3 'PlayerSettings' does not contain a definition for 'suppressCommonWarnings'
+#if UNITY_2019_4 || UNITY_2020_1 // RIDER-77206 Unity 2020.1.3 'PlayerSettings' does not contain a definition for 'suppressCommonWarnings'
       var type = typeof(PlayerSettings);
       var propertyInfo = type.GetProperty("suppressCommonWarnings");
       if (propertyInfo != null && propertyInfo.GetValue(null) is bool && (bool)propertyInfo.GetValue(null))
