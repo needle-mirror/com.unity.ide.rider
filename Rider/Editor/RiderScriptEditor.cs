@@ -5,7 +5,9 @@ using System.Linq;
 using JetBrains.Annotations;
 using JetBrains.Rider.PathLocator;
 using Packages.Rider.Editor.ProjectGeneration;
+using Packages.Rider.Editor.Debugger;
 using Packages.Rider.Editor.Util;
+using Rider.Editor.Util;
 using Unity.CodeEditor;
 using UnityEditor;
 using UnityEngine;
@@ -17,10 +19,12 @@ namespace Packages.Rider.Editor
   [InitializeOnLoad]
   internal class RiderScriptEditor : IExternalCodeEditor
   {
-    IDiscovery m_Discoverability;
-    static IGenerator m_ProjectGeneration;
-    RiderInitializer m_Initiliazer = new RiderInitializer();
-    static RiderScriptEditor m_RiderScriptEditor;
+    private IDiscovery m_Discoverability;
+    private static IGenerator m_ProjectGeneration;
+    private static RiderDebuggerProvider m_RiderDebuggerProvider;
+    private RiderInitializer m_Initiliazer = new RiderInitializer();
+    private static RiderScriptEditor m_RiderScriptEditor;
+    private static GUIStyle m_InfoLabelStyle => new GUIStyle("ControlLabel") { wordWrap = true };
 
     static RiderScriptEditor()
     {
@@ -29,6 +33,7 @@ namespace Packages.Rider.Editor
         // todo: make ProjectGeneration lazy
         var projectGeneration = new ProjectGeneration.ProjectGeneration();
         m_RiderScriptEditor = new RiderScriptEditor(new Discovery(), projectGeneration);
+        m_RiderDebuggerProvider = RiderDebuggerProvider.Instance;
         // preserve the order here, otherwise on startup, project generation Sync would happen multiple times
         CodeEditor.Register(m_RiderScriptEditor);
         InitializeInternal(CurrentEditor);
@@ -132,9 +137,111 @@ namespace Packages.Rider.Editor
       SettingsButton(ProjectGenerationFlag.PlayerAssemblies, "Player projects", "For each player project generate an additional csproj with the name 'project-player.csproj'");
       RegenerateProjectFiles();
       EditorGUI.indentLevel--;
+
+#if UNITY_2019_3_OR_NEWER
+      DrawDebuggerOptions();
+#endif
     }
 
-    void RegenerateProjectFiles()
+#if UNITY_2019_3_OR_NEWER
+    private void DrawDebuggerOptions()
+    {
+      EditorGUILayout.Space();
+      EditorGUILayout.BeginHorizontal();
+      var style = GUI.skin.label;
+      var text = "IL2CPP Debug support";
+
+      if (!RiderDebuggerProvider.IsIl2CppScriptingBackend(null))
+      {
+        GUI.enabled = false;
+        text = "IL2CPP Debug support (requires IL2CPP scripting backend)";
+      }
+        
+      if (!RiderDebuggerProvider.IsSupportedRiderVersion())
+      {
+        GUI.enabled = false;
+        text = $"IL2CPP Debug support (requires Rider {RiderDebuggerProvider.RequiredRiderVersionName} or later)";
+      }
+      
+      EditorGUILayout.LabelField(text, style, GUILayout.Width(style.CalcSize(new GUIContent(text)).x));
+     
+      EditorGUILayout.EndHorizontal();
+      EditorGUI.indentLevel++;
+      
+      DebugSettingsButton(Il2CppDebugSupport.PreserveUnityEngineDlls, "Preserve all Unity Engine assemblies", "");
+      DebugSettingsButton(Il2CppDebugSupport.PreservePlayerDlls, "Preserve all user assemblies", "");
+      
+      EditorGUILayout.BeginHorizontal();
+
+      var debugLinkSupportLabelText = $"Support {RiderDebugLinkXmlProcessor.DebugLinkFileName}.xml";
+      var newValue = EditorGUILayout.Toggle(debugLinkSupportLabelText, m_RiderDebuggerProvider.UseDebugLinkDuringTheBuild);
+      
+      if(newValue != m_RiderDebuggerProvider.UseDebugLinkDuringTheBuild)
+        m_RiderDebuggerProvider.ToggleUseDebugLinkDuringTheBuild(newValue);
+
+      if (m_RiderDebuggerProvider.UseDebugLinkDuringTheBuild)
+      {
+        if (GUILayout.Button($"Generate {RiderDebugLinkXmlProcessor.DebugLinkFileName}.xml template file"))
+        {
+          RiderDebugLinkXmlProcessor.GenerateTemplateDebugLinkXml();
+        }
+      }
+
+      EditorGUILayout.EndHorizontal();
+      EditorGUILayout.Space();
+      
+
+      EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+      {
+        EditorGUILayout.Space();
+
+        EditorGUILayout.LabelField("Use 'Preserve...' options to prevent the corresponding assemblies from being removed and " +
+                                   "to make additional debug information available during a Rider debug session."
+          , m_InfoLabelStyle);
+
+        EditorGUILayout.Space();
+
+        EditorGUILayout.BeginHorizontal();
+        {
+          const string learnMoreText = "Learn more: ";
+          EditorGUILayout.LabelField(learnMoreText, style,
+            GUILayout.Width(m_InfoLabelStyle.CalcSize(new GUIContent(learnMoreText)).x+13
+            ));
+          if (PluginSettings.LinkButton("Unity managed code stripping documentation"))
+          {
+            Application.OpenURL("https://docs.unity3d.com/Manual/ManagedCodeStripping.html#LinkXMLAnnotation");
+          }
+        }
+        EditorGUILayout.EndHorizontal();
+
+        EditorGUILayout.Space();
+        var debugLinkSupportHintMessage =
+          $"'{debugLinkSupportLabelText}' adds extra assembly information to the debug build, enhancing the debugging experience. " +
+          "It does not affect the release build output.";
+        EditorGUILayout.LabelField(debugLinkSupportHintMessage
+          , m_InfoLabelStyle);
+        EditorGUILayout.Space();
+      }
+      EditorGUILayout.EndVertical();
+      
+      EditorGUI.indentLevel--;
+      EditorGUILayout.Space();
+
+      GUI.enabled = true;
+    }
+#endif
+
+    private static void DebugSettingsButton(Il2CppDebugSupport preference, string guiMessage, string toolTip)
+    {
+      var prevValue = m_RiderDebuggerProvider.Il2CppDebugSupport.HasFlag(preference);
+      var newValue = EditorGUILayout.Toggle(new GUIContent(guiMessage, toolTip), prevValue);
+      if (newValue != prevValue)
+      {
+        m_RiderDebuggerProvider.ToggleIl2CppSupport(preference);
+      }
+    }
+
+    private void RegenerateProjectFiles()
     {
       var rect = EditorGUI.IndentedRect(EditorGUILayout.GetControlRect(new GUILayoutOption[] {}));
       rect.width = 252;
@@ -144,7 +251,7 @@ namespace Packages.Rider.Editor
       }
     }
 
-    void SettingsButton(ProjectGenerationFlag preference, string guiMessage, string toolTip)
+    private void SettingsButton(ProjectGenerationFlag preference, string guiMessage, string toolTip)
     {
       var prevValue = m_ProjectGeneration.AssemblyNameProvider.ProjectGenerationFlag.HasFlag(preference);
       var newValue = EditorGUILayout.Toggle(new GUIContent(guiMessage, toolTip), prevValue);
@@ -339,7 +446,7 @@ namespace Packages.Rider.Editor
       return "";
     }
 
-    static bool IsUnityScript(string path)
+    private static bool IsUnityScript(string path)
     {
       if (UnityEditor.Unsupported.IsDeveloperBuild())
       {
@@ -356,7 +463,7 @@ namespace Packages.Rider.Editor
       return false;
     }
 
-    static string GetBaseUnityDeveloperFolder()
+    private static string GetBaseUnityDeveloperFolder()
     {
       return Directory.GetParent(EditorApplication.applicationPath).Parent.Parent.FullName;
     }

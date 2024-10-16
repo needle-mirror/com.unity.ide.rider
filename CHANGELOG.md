@@ -1,11 +1,16 @@
 # Code Editor Package for Rider
+## [3.0.34] - 2024-10-16
 
+- Bump Unity minimum supported version
 
-## [3.0.31] - 2024-06-17
+## [3.0.33] - 2024-08-30
 
-fix RIDER-104519 Rider is reporting errors in scripts that work fine in Unity when utilizing DOTS - when Player project, by generating projects for all assemblies in "com.unity.entities", "com.unity.collections"
-fix RIDER-111622 Unity Rider package is not compatible with Rider Dev builds
+- Improve UI performance
 
+## [3.0.32] - 2024-08-30
+
+- Improved IL2CPP debugging by generating a custom link.xml during debug builds. [RIDER-114406](https://youtrack.jetbrains.com/issue/RIDER-114406/Add-Active-scene-this.gameobject-to-the-debug-nodes-for-the-Unity-IL2cpp-builds)
+-	Added support for debug_link.xml files, a debug-only version of link.xml. [RIDER-114973](https://youtrack.jetbrains.com/issue/RIDER-114973/Add-debuglink.xml-support-to-the-Rider-Unity-package)
 
 ## [3.0.28] - 2024-02-20
 
@@ -31,7 +36,7 @@ fix RIDER-111622 Unity Rider package is not compatible with Rider Dev builds
 - unification of functionality to  search JetBrains installations and open solution and file in Rider
 
 
-## [3.0.22] - 2023-05-2
+## [3.0.22] - 2023-05-02
 
 - RIDER-82999 Unity's plugin SyncAll does not regenerate project files, and instead does basically nothing.
 - #2401 Compilation issue with Unity 2021.3.0f1

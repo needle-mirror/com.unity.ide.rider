@@ -68,7 +68,6 @@ namespace Packages.Rider.Editor
           Debug.Log($"Unable to determine path to EditorPlugin from {file}");
           return;
         }
-        
         var dllPath = File.ReadLines(file.FullName).FirstOrDefault();
 
         if (dllPath == null)
