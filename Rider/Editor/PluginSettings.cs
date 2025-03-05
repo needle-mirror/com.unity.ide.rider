@@ -56,7 +56,7 @@ namespace Packages.Rider.Editor
             if (button)
             {
               // would use Rider if `log` is on the list of extensions, otherwise would use editor configured in the OS
-              UnityEditorInternal.InternalEditorUtility.OpenFileAtLineExternal(EditorPluginInterop.LogPath, 0);
+              LogFileOpener.OpenFileAtLineExternal(EditorPluginInterop.LogPath);
             }
 
             GUI.enabled = previous;

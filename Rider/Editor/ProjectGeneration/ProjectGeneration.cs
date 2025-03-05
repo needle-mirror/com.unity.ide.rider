@@ -274,7 +274,12 @@ namespace Packages.Rider.Editor.ProjectGeneration
               a.EndsWith("UnityEngine.CoreModule.dll", StringComparison.Ordinal)).ToArray();
           }
 
-          projectParts.Add(AddProjectPart(assembly, riderAssembly, coreReferences, additionalAssets));
+          var rootNamespace = string.Empty;
+#if UNITY_2020_2_OR_NEWER
+          if (additionalAssets.Any()) 
+            rootNamespace = CompilationPipeline.GetAssemblyRootNamespaceFromScriptPath(additionalAssets.First());
+#endif
+          projectParts.Add(AddProjectPart(assembly, riderAssembly, coreReferences, additionalAssets, rootNamespace));
         }
       }
 
@@ -290,7 +295,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
     }
 
     private static ProjectPart AddProjectPart(string assemblyName, Assembly riderAssembly, string[] coreReferences,
-      List<string> additionalAssets)
+      List<string> additionalAssets, string rootNamespace)
     {
       Assembly assembly = null;
       if (riderAssembly != null)
@@ -301,7 +306,12 @@ namespace Packages.Rider.Editor.ProjectGeneration
           new []{"UNITY_EDITOR"},
           Array.Empty<Assembly>(),
           coreReferences,
-          riderAssembly.flags);
+          riderAssembly.flags
+#if UNITY_2020_2_OR_NEWER
+          , new ScriptCompilerOptions(),
+          rootNamespace
+#endif
+          );
       }
       return new ProjectPart(assemblyName, assembly, additionalAssets);
     }

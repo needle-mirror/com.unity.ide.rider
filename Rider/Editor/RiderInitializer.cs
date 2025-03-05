@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using Packages.Rider.Editor.Util;
 using Rider.Editor.Util;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
@@ -35,7 +36,13 @@ namespace Packages.Rider.Editor
           if (SystemInfo.operatingSystemFamily == OperatingSystemFamily.MacOSX)
             relPath = "Contents/plugins/rider-unity/EditorPlugin";
           var baseDir = Path.Combine(editorPath, relPath);
-          var dllFile = new FileInfo(Path.Combine(baseDir, $"{EditorPluginInterop.EditorPluginAssemblyName}.dll"));
+
+          var dllFiles = Directory.GetFiles(baseDir, $"{EditorPluginInterop.EditorPluginAssemblyNamePrefix}*.dll", SearchOption.TopDirectoryOnly);
+          var closestMatch = UnityVersionUtils.FindClosestMatch(EditorPluginInterop.EditorPluginAssemblyNamePrefix, UnityVersionUtils.UnityVersion, dllFiles);
+
+          var dllFile = closestMatch != null
+            ? new FileInfo(closestMatch)
+            : new FileInfo(Path.Combine(baseDir, $"{EditorPluginInterop.EditorPluginAssemblyName}.dll"));
 
           if (!dllFile.Exists)
             dllFile = new FileInfo(Path.Combine(baseDir,

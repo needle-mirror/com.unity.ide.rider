@@ -1,4 +1,11 @@
 # Code Editor Package for Rider
+## [3.0.35] - 2025-03-05
+
+- fix RIDER-120306 RootNamespace is not generated for a csproj without cs files
+- fix RIDER-121881 GetAllRiderPaths failed
+- fix RIDER-122372 RiderPathLocator issue (found Rider installations duplicates on Linux)
+- fix RIDER-122527 Open log in the Rider tab in Unity Editor doesn't work
+
 ## [3.0.34] - 2024-10-16
 
 - Bump Unity minimum supported version

@@ -26,16 +26,36 @@ namespace Packages.Rider.Editor.UnitTesting
     /// <summary>
     /// Is called by Rider Unity plugin via reflections
     /// </summary>
-    /// <param name="sessionId">The session ID for the test run.</param>
-    /// <param name="testMode">The mode in which the tests will be run.</param>
-    /// <param name="assemblyNames">An array of assembly names to be included in the test run.</param>
-    /// <param name="testNames">An array of test names to be executed.</param>
-    /// <param name="categoryNames">An array of category names to filter the tests.</param>
-    /// <param name="groupNames">An array of group names for grouping tests.</param>
-    /// <param name="buildTarget">The build target for which the tests will be run.</param>
-    /// <param name="callbacksHandlerCodeBase">The codebase of the callback handler.</param>
-    /// <param name="callbacksHandlerTypeName">The type name of the callback handler.</param>
-    /// <param name="callbacksHandlerDependencies">An array of callback handler dependencies.</param>
+    /// <param name="sessionId">
+    /// Session ID of the Test Run
+    /// </param>
+    /// <param name="testMode">
+    /// Test mode to use
+    /// </param>
+    /// <param name="assemblyNames">
+    /// Names of assemblies containing the tests
+    /// </param>
+    /// <param name="testNames">
+    /// Name of the tests to be run
+    /// </param>
+    /// <param name="categoryNames">
+    /// Categories used for the test run
+    /// </param>
+    /// <param name="groupNames">
+    /// Groups used for the test run
+    /// </param>
+    /// <param name="buildTarget">
+    /// Targeted build platform
+    /// </param>
+    /// <param name="callbacksHandlerCodeBase">
+    /// Callbacks handler code to use
+    /// </param>
+    /// <param name="callbacksHandlerTypeName">
+    /// Callbacks handler type name
+    /// </param>
+    /// <param name="callbacksHandlerDependencies">
+    /// Dependecies of the callbacks handler
+    /// </param>
     [UsedImplicitly]
     public static void RunTestsWithSyncCallbacks(string sessionId, int testMode, string[] assemblyNames, 
       string[] testNames, string[] categoryNames, string[] groupNames, int? buildTarget,  
@@ -53,12 +73,24 @@ namespace Packages.Rider.Editor.UnitTesting
     /// <summary>
     /// Is called by Rider Unity plugin via reflections
     /// </summary>
-    /// <param name="testMode">The mode in which the tests are run (e.g., normal, debug).</param>
-    /// <param name="assemblyNames">An array of assembly names containing the tests to execute.</param>
-    /// <param name="testNames">An array of specific test names to be executed.</param>
-    /// <param name="categoryNames">An array of category names to filter the tests.</param>
-    /// <param name="groupNames">An array of group names for organizing the tests.</param>
-    /// <param name="buildTarget">The build target for which the tests are executed (nullable).</param>
+    /// <param name="testMode">
+    /// Test mode to use
+    /// </param>
+    /// <param name="assemblyNames">
+    /// Names of assemblies containing the tests
+    ///  </param>
+    /// <param name="testNames">
+    /// Name of the tests to be run
+    /// </param>
+    /// <param name="categoryNames">
+    /// Categories used for the test run
+    /// </param>
+    /// <param name="groupNames">
+    /// Groups used for the test run
+    /// </param>
+    /// <param name="buildTarget">
+    /// Targeted build platform
+    /// </param>
     [UsedImplicitly]
     public static void RunTests(int testMode, string[] assemblyNames, string[] testNames, string[] categoryNames, string[] groupNames, int? buildTarget)
     {
