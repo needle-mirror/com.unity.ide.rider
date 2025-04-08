@@ -1,4 +1,8 @@
 # Code Editor Package for Rider
+## [3.0.36] - 2025-04-08
+
+- fix RIDER-124592 Avoid affecting "Strip Engine Code" while IL2CPP debug enabled
+
 ## [3.0.35] - 2025-03-05
 
 - fix RIDER-120306 RootNamespace is not generated for a csproj without cs files

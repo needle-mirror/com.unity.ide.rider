@@ -2,25 +2,25 @@
   "name": "com.unity.ide.rider",
   "displayName": "JetBrains Rider Editor",
   "description": "The JetBrains Rider Editor package provides an integration for using the JetBrains Rider IDE as a code editor for Unity. It adds support for generating .csproj files for code completion and auto-discovery of installations.",
-  "version": "3.0.35",
+  "version": "3.0.36",
   "unity": "2019.4",
   "unityRelease": "6f1",
   "dependencies": {
     "com.unity.ext.nunit": "1.0.6"
   },
   "relatedPackages": {
-    "com.unity.ide.rider.tests": "3.0.35"
+    "com.unity.ide.rider.tests": "3.0.36"
   },
   "_upm": {
-    "changelog": "- fix RIDER-120306 RootNamespace is not generated for a csproj without cs files\n- fix RIDER-121881 GetAllRiderPaths failed\n- fix RIDER-122372 RiderPathLocator issue (found Rider installations duplicates on Linux)\n- fix RIDER-122527 Open log in the Rider tab in Unity Editor doesn't work"
+    "changelog": "- fix RIDER-124592 Avoid affecting \"Strip Engine Code\" while IL2CPP debug enabled"
   },
   "upmCi": {
-    "footprint": "1fb1fce5117eeeb61afa290b9b59fbdf5cd656a0"
+    "footprint": "0f5f7817a54759523be87e8d6b6c95abc8e313d3"
   },
   "documentationUrl": "https://docs.unity3d.com/Packages/com.unity.ide.rider@3.0/manual/index.html",
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/com.unity.ide.rider.git",
     "type": "git",
-    "revision": "52cd6800886cb6c849f5c908665829f1f8cca705"
+    "revision": "b5315083ab3861d21f6ab2ed0d9514daf04bf208"
   }
 }
