@@ -1,11 +1,11 @@
 
 # Using the JetBrains Rider Editor package
 
-To use the package, go to **Edit &gt; Preferences &gt; External Tools**, click on the **External Script Editor** dropdown menu and select your version of **Rider**. When you select this option, the window reloads.
+To use the package, go to **Edit** &gt; **Preferences** (macOS: **Unity** &gt; **Settings**) &gt;  **External Tools**, click on the **External Script Editor** dropdown menu and select your version of **Rider**. When you select this option, the window reloads.
 
 After the window reloads, new settings that control production of .csproj files become available.
 
-![](images/preferences-settings-external-tools-window.png) <br/>
+![External Tools tab in the Preferences window with Rider selected as the External Script Editor.](images/preferences-settings-external-tools-window.png) <br/>
 *External Tools tab in the Preferences window*
 
 ## Commandline endpoints
@@ -35,7 +35,7 @@ A: `Unity -batchmode -quit -projectPath ProjectPath -executeMethod Packages.Ride
 
 This package also adds a second tab under **Preferences** named **Rider**, pictured below.
 
-![](images/preferences-rider-tab.png)
+![Rider tab in the Preferences window.](images/preferences-rider-tab.png)
 <br/>*Rider tab in the Preferences window*
 
 > [!NOTE]

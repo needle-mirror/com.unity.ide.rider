@@ -104,9 +104,12 @@ namespace Packages.Rider.Editor.ProjectGeneration
 
       PackageManagerTracker.SyncIfNeeded(checkProjectFiles);
 
-      if (HasFilesBeenModified(affectedFiles, reimportedFiles) || RiderScriptEditorData.instance.hasChanges
-                                                               || RiderScriptEditorData.instance.HasChangesInCompilationDefines()
-                                                               || (checkProjectFiles && LastWriteTracker.HasLastWriteTimeChanged()))
+      var affected = affectedFiles as string[] ?? affectedFiles.ToArray();
+      var reimported = reimportedFiles as string[] ?? reimportedFiles.ToArray();
+      if (HasFilesBeenModified(affected, reimported) || RiderScriptEditorData.instance.hasChanges
+                                                   || RiderScriptEditorData.instance.HasChangesInCompilationDefines()
+                                                   || (checkProjectFiles && LastWriteTracker.HasLastWriteTimeChanged())
+                                                   || IsAdditionalFile(affected.Union(reimported).ToArray()))
       {
         Sync();
         return true;
@@ -124,6 +127,22 @@ namespace Packages.Rider.Editor.ProjectGeneration
     {
       var extension = Path.GetExtension(asset);
       return extension == ".asmdef" || extension == ".asmref" || Path.GetFileName(asset) == "csc.rsp";
+    }
+
+    private bool IsAdditionalFile(string[] assets)
+    {
+#if UNITY_2022_2_OR_NEWER
+      if (!assets.Any()) return false;
+      foreach (var assembly in m_AssemblyNameProvider.GetAllAssemblies())
+      {
+        if (assembly.compilerOptions.RoslynAdditionalFilePaths != null &&
+            assembly.compilerOptions.RoslynAdditionalFilePaths.Any(assets.Contains))
+          return true;
+      }
+      return false;
+#else
+      return false;
+#endif
     }
 
     public void Sync()

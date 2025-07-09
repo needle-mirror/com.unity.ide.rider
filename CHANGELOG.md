@@ -1,4 +1,9 @@
 # Code Editor Package for Rider
+## [3.0.37] - 2025-07-09
+
+- Automatic update generated projects, when Roslyn AdditionalFiles are changed
+- Remove .editorconfig from distributed package to not prevent hiding warnings with a top user .editorconfig
+
 ## [3.0.36] - 2025-04-08
 
 - fix RIDER-124592 Avoid affecting "Strip Engine Code" while IL2CPP debug enabled
