@@ -1,4 +1,8 @@
 # Code Editor Package for Rider
+## [3.0.38] - 2025-09-15
+
+- fix a regression, introduced in 3.0.37. New files are not added in the project.
+
 ## [3.0.37] - 2025-07-09
 
 - Automatic update generated projects, when Roslyn AdditionalFiles are changed

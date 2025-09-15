@@ -104,12 +104,9 @@ namespace Packages.Rider.Editor.ProjectGeneration
 
       PackageManagerTracker.SyncIfNeeded(checkProjectFiles);
 
-      var affected = affectedFiles as string[] ?? affectedFiles.ToArray();
-      var reimported = reimportedFiles as string[] ?? reimportedFiles.ToArray();
-      if (HasFilesBeenModified(affected, reimported) || RiderScriptEditorData.instance.hasChanges
-                                                   || RiderScriptEditorData.instance.HasChangesInCompilationDefines()
-                                                   || (checkProjectFiles && LastWriteTracker.HasLastWriteTimeChanged())
-                                                   || IsAdditionalFile(affected.Union(reimported).ToArray()))
+      if (HasFilesBeenModified(affectedFiles, reimportedFiles) || RiderScriptEditorData.instance.hasChanges
+                                                               || RiderScriptEditorData.instance.HasChangesInCompilationDefines()
+                                                               || (checkProjectFiles && LastWriteTracker.HasLastWriteTimeChanged()))
       {
         Sync();
         return true;
@@ -120,29 +117,24 @@ namespace Packages.Rider.Editor.ProjectGeneration
 
     private bool HasFilesBeenModified(IEnumerable<string> affectedFiles, IEnumerable<string> reimportedFiles)
     {
-      return affectedFiles.Any(ShouldFileBePartOfSolution) || reimportedFiles.Any(ShouldSyncOnReimportedAsset);
+      return affectedFiles.Any(it => ShouldFileBePartOfSolution(it) || ShouldSyncOnAffectedFiles(it)) 
+             || reimportedFiles.Any(ShouldSyncOnReimportedAsset);
+    }
+
+    private static bool ShouldSyncOnAffectedFiles(string asset)
+    {
+      var extension = Path.GetExtension(asset);
+      // https://docs.unity3d.com/6000.2/Documentation/ScriptReference/Compilation.ScriptCompilerOptions.RoslynAdditionalFilePaths.html
+      // Source Generated files should get updated, when the additionalfile files are renamed/moved
+      return extension.Equals(".additionalfile", StringComparison.OrdinalIgnoreCase); 
     }
 
     private static bool ShouldSyncOnReimportedAsset(string asset)
     {
       var extension = Path.GetExtension(asset);
-      return extension == ".asmdef" || extension == ".asmref" || Path.GetFileName(asset) == "csc.rsp";
-    }
-
-    private bool IsAdditionalFile(string[] assets)
-    {
-#if UNITY_2022_2_OR_NEWER
-      if (!assets.Any()) return false;
-      foreach (var assembly in m_AssemblyNameProvider.GetAllAssemblies())
-      {
-        if (assembly.compilerOptions.RoslynAdditionalFilePaths != null &&
-            assembly.compilerOptions.RoslynAdditionalFilePaths.Any(assets.Contains))
-          return true;
-      }
-      return false;
-#else
-      return false;
-#endif
+      return extension.Equals(".asmdef", StringComparison.OrdinalIgnoreCase) ||
+             extension.Equals(".asmref", StringComparison.OrdinalIgnoreCase) ||
+             Path.GetFileName(asset).Equals("csc.rsp", StringComparison.OrdinalIgnoreCase);
     }
 
     public void Sync()
