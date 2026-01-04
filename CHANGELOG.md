@@ -1,4 +1,8 @@
 # Code Editor Package for Rider
+## [3.0.39] - 2026-01-04
+
+- fix duplicate project names in .sln when Player projects are enabled
+
 ## [3.0.38] - 2025-09-15
 
 - fix a regression, introduced in 3.0.37. New files are not added in the project.
