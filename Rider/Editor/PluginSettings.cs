@@ -73,7 +73,7 @@ namespace Packages.Rider.Editor
           EditorGUILayout.HelpBox(loggingMsg, MessageType.None);
 
           const string url = "https://github.com/JetBrains/resharper-unity";
-          if (LinkButton(url))
+          if (EditorGUILayout.LinkButton(url))
             Application.OpenURL(url);;
 
           GUILayout.FlexibleSpace();

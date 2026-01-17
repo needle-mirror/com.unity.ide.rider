@@ -680,7 +680,8 @@ namespace Packages.Rider.Editor.ProjectGeneration
           "    <_TargetFrameworkDirectories>non_empty_path_generated_by_unity.rider.package</_TargetFrameworkDirectories>")
         .AppendLine(
           "    <_FullFrameworkReferenceAssemblyPaths>non_empty_path_generated_by_unity.rider.package</_FullFrameworkReferenceAssemblyPaths>")
-        .AppendLine("    <DisableHandlePackageFileConflicts>true</DisableHandlePackageFileConflicts>");
+        .AppendLine("    <DisableHandlePackageFileConflicts>true</DisableHandlePackageFileConflicts>")
+        .AppendLine("    <ResolveNuGetPackages>false</ResolveNuGetPackages>");
 
       var rulesetPaths = GetRoslynAnalyzerRulesetPaths(assembly, responseFilesDataArgs);
       foreach (var path in rulesetPaths)
