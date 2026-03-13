@@ -1,4 +1,8 @@
 # Code Editor Package for Rider
+## [3.0.40] - 2026-03-13
+
+- Normalise paths for additional files for roslyn, fixes RIDER-136169 Roslyn process gets stuck
+
 ## [3.0.39] - 2026-01-17
 
 - fix the indent of the LinkButton

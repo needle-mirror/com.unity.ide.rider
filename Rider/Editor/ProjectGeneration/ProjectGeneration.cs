@@ -613,7 +613,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
 
       foreach (var reference in binaryReferences)
       {
-        var escapedFullPath = GetNormalisedAssemblyPath(reference);
+        var escapedFullPath = GetNormalisedPath(reference);
         var assemblyName = GetAssemblyNameFromPath(reference);
         projectBuilder
           .Append("    <Reference Include=\"").Append(assemblyName).AppendLine("\">")
@@ -791,7 +791,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
       return configFile;
     }
 
-    private static string[] GetRoslynAdditionalFiles(ProjectPart assembly, ILookup<string, string> otherResponseFilesData)
+    private string[] GetRoslynAdditionalFiles(ProjectPart assembly, ILookup<string, string> otherResponseFilesData)
     {
       var additionalFilePathsFromCompilationPipeline = Array.Empty<string>();
 #if UNITY_2021_3 // https://github.com/JetBrains/resharper-unity/issues/2401
@@ -807,6 +807,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
       return otherResponseFilesData["additionalfile"]
         .SelectMany(x=>x.Split(';'))
         .Concat(additionalFilePathsFromCompilationPipeline)
+        .Select(GetNormalisedPath)
         .Distinct().ToArray();
     }
 
@@ -820,7 +821,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
 #else
         .Concat(assembly.CompilerOptions.RoslynAnalyzerDllPaths)
 #endif
-        .Select(GetNormalisedAssemblyPath)
+        .Select(GetNormalisedPath)
         .Distinct()
         .ToArray();
 #else
@@ -840,7 +841,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
         paths.Add(assembly.CompilerOptions.RoslynAnalyzerRulesetPath);
 #endif
 
-      return paths.Select(GetNormalisedAssemblyPath);
+      return paths.Select(GetNormalisedPath);
     }
 
     private static void AppendWarningAsError(StringBuilder stringBuilder,
@@ -996,7 +997,7 @@ namespace Packages.Rider.Editor.ProjectGeneration
       return guid;
     }
 
-    private string GetNormalisedAssemblyPath(string path)
+    private string GetNormalisedPath(string path)
     {
       if (!m_NormalisedPaths.TryGetValue(path, out var normalisedPath))
       {
