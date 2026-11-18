@@ -100,7 +100,7 @@ namespace Packages.Rider.Editor
 
     public static bool LinkButton(string url)
     {
-      var bClicked = GUILayout.Button(url, RiderStyles.LinkLabelStyle);
+      var bClicked = GUILayout.Button(url, RiderStyles.LinkLabelStyle, GUILayout.Height(EditorGUIUtility.singleLineHeight));
       var rect = GUILayoutUtility.GetLastRect();
       rect.width = RiderStyles.LinkLabelStyle.CalcSize(new GUIContent(url)).x;
       EditorGUIUtility.AddCursorRect(rect, MouseCursor.Link);

@@ -6,7 +6,6 @@ using JetBrains.Annotations;
 using JetBrains.Rider.PathLocator;
 using Packages.Rider.Editor.ProjectGeneration;
 using Packages.Rider.Editor.Util;
-using Rider.Editor.Util;
 using Unity.CodeEditor;
 using UnityEditor;
 using UnityEngine;
@@ -29,7 +28,12 @@ namespace Packages.Rider.Editor
       try
       {
         // todo: make ProjectGeneration lazy
-        var projectGeneration = new ProjectGeneration.ProjectGeneration();
+        IGenerator projectGeneration;
+#if UNITY_6000_7_OR_NEWER
+        projectGeneration = new SdkStyleProjectGeneration();
+#else
+        projectGeneration = new LegacyStyleProjectGeneration();
+#endif
         m_RiderScriptEditor = new RiderScriptEditor(new Discovery(), projectGeneration);
         // preserve the order here, otherwise on startup, project generation Sync would happen multiple times
         CodeEditor.Register(m_RiderScriptEditor);
@@ -107,6 +111,12 @@ namespace Packages.Rider.Editor
 
     public void OnGUI()
     {
+      if (UnityVersionUtils.MSBuildCompilationPipelineEnabled)
+      {
+        EditorGUILayout.HelpBox("MSBuild compilation is enabled: project generation settings is controlled by the Unity Editor", MessageType.Info);
+        return;
+      }
+      
       GUILayout.BeginHorizontal();
 
       var style = GUI.skin.label;
@@ -306,7 +316,7 @@ namespace Packages.Rider.Editor
 
     public bool OpenProject(string path, int line, int column)
     {
-      var projectGeneration = (ProjectGeneration.ProjectGeneration) m_ProjectGeneration;
+      var projectGeneration = m_ProjectGeneration;
       // Assets - Open C# Project passes empty path here
       if (path != "" && !projectGeneration.HasValidExtension(path))
       {

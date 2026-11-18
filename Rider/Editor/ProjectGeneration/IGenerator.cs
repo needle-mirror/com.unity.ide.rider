@@ -9,5 +9,6 @@ namespace Packages.Rider.Editor.ProjectGeneration
     bool HasSolutionBeenGenerated();
     string SolutionFile();
     IAssemblyNameProvider AssemblyNameProvider { get; }
+    bool HasValidExtension(string file);
   }
 }

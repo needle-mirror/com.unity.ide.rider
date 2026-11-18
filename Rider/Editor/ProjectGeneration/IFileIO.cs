@@ -13,5 +13,6 @@ namespace Packages.Rider.Editor.ProjectGeneration
     // rootDirectoryFullPath is assumed to be the result of Path.GetFullPath
     // Passing the directory with a trailing slash (Path.DirectorySeparatorChar) will avoid an allocation
     string EscapedRelativePathFor(string path, string rootDirectoryFullPath);
+    void DeleteFile(string path);
   }
 }

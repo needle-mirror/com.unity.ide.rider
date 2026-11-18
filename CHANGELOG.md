@@ -1,5 +1,11 @@
 # Code Editor Package for Rider
 
+## [3.1.1] - 2026-11-18
+
+- Switch to the SDK style project format for Unity 6.7+.
+- Skip generating and remove old project files when MSBuild Compilation (Experimental) Unity feature is enabled
+- Fix RIDER-142281 Generated csproj emits unresolved virtual path for .globalconfig in local (file:) packages
+
 ## [3.1.0] - 2026-09-03
 - Unity minimum supported version increase to 6000.0
 

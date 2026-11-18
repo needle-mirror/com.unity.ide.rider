@@ -29,4 +29,4 @@ For more information about the Rider IDE, see the [JetBrains Rider documentation
 
 ### Submitting issues
 
-This package is maintained by JetBrains and Unity. Submit issues to the [JetBrains/resharper-unity/issues GitHub page](https://github.com/JetBrains/resharper-unity/issues). Unity intends for this package to become accessible to the public on GitHub in the future.
+This package is maintained by JetBrains and Unity. Submit issues to the [JetBrains YouTrack](https://youtrack.jetbrains.com/newIssue?project=RIDER&c=technology+Unity). Unity intends for this package to become accessible to the public on GitHub in the future.

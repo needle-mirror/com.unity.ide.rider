@@ -38,6 +38,11 @@ namespace Packages.Rider.Editor.ProjectGeneration {
       return SecurityElement.Escape(path);
     }
 
+    public void DeleteFile(string path)
+    {
+      File.Delete(path);
+    }
+
     private static string SkipPathPrefix(string path, string prefix)
     {
       var root = prefix[prefix.Length - 1] == Path.DirectorySeparatorChar

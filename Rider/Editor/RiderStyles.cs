@@ -10,7 +10,8 @@ namespace Packages.Rider.Editor
       LinkLabelStyle = new GUIStyle(EditorStyles.linkLabel)
       {
         padding = GUI.skin.label.padding,
-        margin = GUI.skin.label.margin
+        margin = GUI.skin.label.margin,
+        alignment = GUI.skin.label.alignment
       };
       LinkLabelStyle.padding.left = 0;
       LinkLabelStyle.padding.right = 0;

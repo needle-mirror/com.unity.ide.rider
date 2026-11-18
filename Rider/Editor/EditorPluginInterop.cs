@@ -2,8 +2,6 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
-using UnityEditor.Build.Reporting;
 using Packages.Rider.Editor.Util;
 using Debug = UnityEngine.Debug;
 
@@ -70,9 +68,9 @@ namespace Packages.Rider.Editor
           if (assembly == null) return null;
           var type = assembly.GetType(ourEntryPointTypeName);
           if (type == null) return null;
-          var field = type.GetField("LogPath", BindingFlags.NonPublic | BindingFlags.Static);
-          if (field == null) return null;
-          return field.GetValue(null) as string;
+          var @field = type.GetField("LogPath", BindingFlags.NonPublic | BindingFlags.Static);
+          if (@field == null) return null;
+          return @field.GetValue(null) as string;
         }
         catch (Exception)
         {
@@ -136,18 +134,30 @@ namespace Packages.Rider.Editor
         }
         else
             DisableSyncSolutionOnceCallBack();
-        
-        var type = assembly.GetType("JetBrains.Rider.Unity.Editor.AfterUnity56.EntryPoint");
-        if (type == null) 
-          type = assembly.GetType("JetBrains.Rider.Unity.Editor.UnitTesting.EntryPoint"); // oldRider
-        RuntimeHelpers.RunClassConstructor(type.TypeHandle);
+
+        var entryPointType = assembly.GetType(ourEntryPointTypeName); 
+        var initMethod = entryPointType.GetMethod("Initialize", BindingFlags.NonPublic | BindingFlags.Static);
+        if (initMethod != null)
+          initMethod.Invoke(null, new object[] { UnityCodeLifetime.Token });
+        else
+          InitLegacyEntryPoint(assembly);
       }
-      catch (TypeInitializationException ex)
+      catch (Exception ex)
       {
         Debug.LogException(ex);
         if (ex.InnerException != null) 
           Debug.LogException(ex.InnerException);
       }
+    }
+
+    private static void InitLegacyEntryPoint(Assembly assembly)
+    {
+      // this is a legacy entry point into the editor plugin that tries to manage its lifetime by its own,
+      // using AppDomain.DomainUnload, it will be removed someday, so all its initialization logic is encapsulated here
+      var type = assembly.GetType("JetBrains.Rider.Unity.Editor.AfterUnity56.EntryPoint");
+      if (type == null)
+        type = assembly.GetType("JetBrains.Rider.Unity.Editor.UnitTesting.EntryPoint"); // oldRider
+      System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(type.TypeHandle);
     }
   }
 }
